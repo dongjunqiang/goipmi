@@ -45,8 +45,11 @@ type NetworkFunction uint8
 
 // Network Function Codes per section 5.1
 var (
-	NetworkFunctionChassis = NetworkFunction(0x00)
-	NetworkFunctionApp     = NetworkFunction(0x06)
+	NetworkFunctionChassis     = NetworkFunction(0x00)
+	NetworkFunctionSensorEvent = NetworkFunction(0x04)
+	NetworkFunctionApp         = NetworkFunction(0x06)
+	NetworkFunctionStorge      = NetworkFunction(0x0A)
+	NetworkFunctionTransport   = NetworkFunction(0x0C)
 )
 
 var (

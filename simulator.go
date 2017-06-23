@@ -18,7 +18,7 @@ package ipmi
 
 import (
 	"bytes"
-
+	"fmt"
 	"hash/adler32"
 	"log"
 	"net"
@@ -56,6 +56,10 @@ func NewSimulator(addr net.UDPAddr) *Simulator {
 		CommandActivateSession:          s.sessionActivate,
 		CommandSetSessionPrivilegeLevel: s.sessionPrivilege,
 		CommandCloseSession:             s.sessionClose,
+	}
+
+	s.handlers[NetworkFunctionStorge] = map[Command]Handler{
+		CommandGetSDRRepositoryInfo: s.repositoryInfo,
 	}
 
 	// Built-in handlers for chassis commands
@@ -154,6 +158,12 @@ func (s *Simulator) deviceID(*Message) Response {
 	}
 }
 
+func (s *Simulator) repositoryInfo(*Message) Response {
+	return &SDRRepositoryInfoResponse{
+		CompletionCode: CommandCompleted,
+	}
+}
+
 func (s *Simulator) authCapabilities(*Message) Response {
 	return &AuthCapabilitiesResponse{
 		CompletionCode:  CommandCompleted,
@@ -214,6 +224,10 @@ func (s *Simulator) ipmiCommand(m *Message) []byte {
 		}
 	}
 
+	//section 5.1
+	lun := uint8(m.ipmiHeader.NetFnRsLUN & 0x03)
+	m.ipmiHeader.NetFnRsLUN = (((m.ipmiHeader.NetFnRsLUN >> 2) + 1) << 2) + lun
+
 	return m.toBytes(response)
 }
 
@@ -249,7 +263,6 @@ func (s *Simulator) serve() error {
 			log.Print(err)
 			continue
 		}
-
 		switch header.Class {
 		case rmcpClassASF:
 			m, err := asfMessageFromBytes(buf)
@@ -257,7 +270,7 @@ func (s *Simulator) serve() error {
 				log.Print(err)
 				continue
 			}
-
+			fmt.Println("rmcpClassASF")
 			response = s.asfCommand(m)
 		case rmcpClassIPMI:
 			m, err := messageFromBytes(buf[:n])
@@ -265,9 +278,10 @@ func (s *Simulator) serve() error {
 				log.Print(err)
 				continue
 			}
-
+			fmt.Println("rmcpClassIPMI")
 			response = s.ipmiCommand(m)
 		default:
+			fmt.Println("default")
 			log.Print(header.unsupportedClass())
 			continue
 		}

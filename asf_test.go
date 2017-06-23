@@ -18,6 +18,7 @@ package ipmi
 
 import (
 	"testing"
+	"fmt"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,6 +28,8 @@ func TestASFMessageFromBytes(t *testing.T) {
 	_, err := asfMessageFromBytes(buf)
 	assert.Error(t, err)
 	assert.Equal(t, ErrShortPacket, err)
+
+	fmt.Println("aaa")
 
 	buf = make([]byte, rmcpHeaderSize+asfHeaderSize)
 	_, err = asfMessageFromBytes(buf)

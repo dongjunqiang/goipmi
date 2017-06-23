@@ -51,6 +51,17 @@ func (c *Client) Send(req *Request, res Response) error {
 	return c.send(req, res)
 }
 
+// dongjq  RepositoryInfo get the Repository Info of the SDR
+func (c *Client) RepositoryInfo() (*SDRRepositoryInfoResponse, error) {
+	req := &Request{
+		NetworkFunctionStorge,
+		CommandGetSDRRepositoryInfo,
+		&SDRRepositoryInfoRequest{},
+	}
+	res := &SDRRepositoryInfoResponse{}
+	return res, c.Send(req, res)
+}
+
 // DeviceID get the Device ID of the BMC
 func (c *Client) DeviceID() (*DeviceIDResponse, error) {
 	req := &Request{

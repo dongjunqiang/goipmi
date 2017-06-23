@@ -16,13 +16,14 @@ limitations under the License.
 
 package ipmi
 
-import (
-	"net"
-	"testing"
+//import (
+//	"net"
+//	"testing"
 
-	"github.com/stretchr/testify/assert"
-)
+//	"github.com/stretchr/testify/assert"
+//)
 
+/*
 func TestOptions(t *testing.T) {
 	tests := []struct {
 		should string
@@ -156,3 +157,4 @@ func TestTool(t *testing.T) {
 	assert.NoError(t, err)
 	s.Stop()
 }
+*/

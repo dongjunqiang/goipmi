@@ -31,6 +31,7 @@ const (
 	CommandChassisStatus            = Command(0x01)
 	CommandSetSystemBootOptions     = Command(0x08)
 	CommandGetSystemBootOptions     = Command(0x09)
+	CommandGetSDRRepositoryInfo     = Command(0x20)
 )
 
 // Request structure
@@ -59,6 +60,20 @@ type DeviceIDResponse struct {
 	AdditionalDeviceSupport uint8
 	ManufacturerID          OemID
 	ProductID               uint16
+}
+
+// DeviceIDRequest per section 33.9
+type SDRRepositoryInfoRequest struct{}
+
+// DeviceIDResponse per section 33.9
+type SDRRepositoryInfoResponse struct {
+	CompletionCode
+	SDRVersion                  uint8
+	RecordCount                 uint16
+	FreeSpaceInBytes            uint16
+	TimestampMostRecentAddition uint32
+	TimestampMostRecentErase    uint32
+	OperationSupprot            uint8
 }
 
 // AuthCapabilitiesRequest per section 22.13
