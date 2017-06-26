@@ -158,12 +158,6 @@ func (s *Simulator) deviceID(*Message) Response {
 	}
 }
 
-func (s *Simulator) repositoryInfo(*Message) Response {
-	return &SDRRepositoryInfoResponse{
-		CompletionCode: CommandCompleted,
-	}
-}
-
 func (s *Simulator) authCapabilities(*Message) Response {
 	return &AuthCapabilitiesResponse{
 		CompletionCode:  CommandCompleted,
