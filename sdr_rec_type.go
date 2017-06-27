@@ -20,10 +20,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	//"fmt"
+	"math"
 )
 
 var (
 	ErrDeviceIdMustLess16 = errors.New("Device Id must be less or equal to 16 bytes length")
+	ErrUnitNotSupport     = errors.New("Unit not support, only support unsigned and 2's complement signed")
+	ErrMZero              = errors.New("M mustn't be 0")
 )
 
 type SDRRecord interface {
@@ -117,7 +121,9 @@ type sdrFullSensorFields struct { //size 42
 	ModifierUnit         uint8
 	Linearization        uint8
 	MTol                 uint16
-	Bacc                 uint32
+	Bacc                 uint16
+	Acc                  uint8
+	RBexp                uint8
 	AnalogFlag           uint8
 	NominalReading       uint8
 	NormalMax            uint8
@@ -164,6 +170,114 @@ func (r *SDRFullSensor) RecordId() uint16 {
 
 func (r *SDRFullSensor) RecordType() SDRRecordType {
 	return r.rtype
+}
+
+//M: 10bit signed 2's complement
+//B: 10bit signed 2's complement
+//Bexp: 4bit signed 2's complement
+//Rexp: 4bit signed 2's complement
+func (r *SDRFullSensor) SetMBExp(M int16, B int16, Bexp int8, Rexp int8) {
+
+	r.MTol = 0
+	r.Bacc = 0
+	r.RBexp = 0
+
+	_M := uint16(math.Abs(float64(M)))
+	_M = _M & 0x01ff //mask leave low 9bit
+	if M < 0 {
+		_M = (((^_M) + 1) & 0x01ff) | 0x0200
+	}
+	r.MTol = r.MTol | (_M & 0x00ff)
+	r.MTol = r.MTol | ((_M << 6) & 0xc000)
+
+	_B := uint16(math.Abs(float64(B)))
+	_B = _B & 0x01ff //mask leave low 9bit
+	if B < 0 {
+		_B = (((^_B) + 1) & 0x01ff) | 0x0200
+	}
+	r.Bacc = r.Bacc | (_B & 0x00ff)
+	r.Bacc = r.Bacc | ((_B << 6) & 0xc000)
+
+	_Bexp := uint8(math.Abs(float64(Bexp)))
+	_Bexp = _Bexp & 0x07 //mask leeve low 3bit
+	if Bexp < 0 {
+		_Bexp = (((^_Bexp) + 1) & 0x07) | 0x08
+	}
+	r.RBexp = r.RBexp | (_Bexp & 0x0f)
+
+	_Rexp := uint8(math.Abs(float64(Rexp)))
+	_Rexp = _Rexp & 0x07 //mask leave low 3bit
+	if Rexp < 0 {
+		_Rexp = (((^_Rexp) + 1) & 0x07) | 0x08
+	}
+	r.RBexp = r.RBexp | ((_Rexp << 4) & 0xf0)
+
+}
+
+func (r *SDRFullSensor) GetMBExp() (M int16, B int16, Bexp int8, Rexp int8) {
+	_M := uint16(((r.MTol & 0xc000) >> 6) | (r.MTol & 0x00ff))
+	if (_M & 0x0200) == 0x0200 { //most significate is 1, mean signed
+		//fmt.Printf("%d,0x%x\n", int16((_M & 0xfdff)), (_M & 0xfdff))
+		M = int16((_M & 0xfdff)) - 512 //2^9
+	} else {
+		M = int16(_M & 0xfdff)
+	}
+
+	_B := uint16(((r.Bacc & 0xc000) >> 6) | (r.Bacc & 0x00ff))
+	if (_B & 0x0200) == 0x0200 { //most significate is 1, mean signed
+		B = int16((_B & 0xfdff)) - 512 //2^9
+	} else {
+		B = int16(_B & 0xfdff)
+	}
+
+	_Bexp := uint8(r.RBexp & 0x0f)
+	if (_Bexp & 0x08) == 0x08 {
+		Bexp = int8((_Bexp & 0xf7)) - 8 //2^3
+	} else {
+		Bexp = int8(_Bexp & 0xf7)
+	}
+
+	_Rexp := uint8((r.RBexp & 0xf0) >> 4)
+	if (_Rexp & 0x08) == 0x08 {
+		Rexp = int8((_Rexp & 0xf7)) - 8 //2^3
+	} else {
+		Rexp = int8(_Rexp & 0xf7)
+	}
+
+	return
+}
+
+// calculate the given value into the SDR reading value, using current M,B,Bexp,Rexp setting
+func (r *SDRFullSensor) CalValue(value float64) uint8 {
+	M, B, Bexp, Rexp := r.GetMBExp()
+	if M == 0 {
+		panic(ErrMZero)
+	}
+
+	//y=(M x V + B x pow(10,Bexp)) x pow(10,Rexp)
+	//know y, cal V
+	var neg bool = false
+	v := (value/math.Pow(10, float64(Rexp)) - float64(B)*math.Pow(10, float64(Bexp))) / float64(M)
+	if v < 0 {
+		neg = true
+	}
+	v = math.Abs(v)
+	uv := uint8(v)
+	if neg {
+		if (r.Unit & 0xc0) == 0x80 {
+			return ((128 - uv) | 0x80)
+		} else {
+			panic(ErrUnitNotSupport)
+		}
+	} else {
+		if (r.Unit & 0xc0) == 0x00 {
+			return uv
+		} else if (r.Unit & 0xc0) == 0x80 {
+			return uv & 0x7f
+		} else {
+			panic(ErrUnitNotSupport)
+		}
+	}
 }
 
 func (r *SDRFullSensor) MarshalBinary() (data []byte, err error) {

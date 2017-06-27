@@ -25,17 +25,23 @@ import (
 
 const sdrOpSupport = SDR_OP_SUP_RESERVE_REPO
 
+// combine the SDRRecord and a float64 value
+type sDRRecordAndValue struct {
+	SDRRecord
+	value float64
+}
+
 type repo struct {
-	sdrRepo []SDRRecord
+	sdrRepo []*sDRRecordAndValue
 }
 
 func NewRepo() *repo {
 	rep := &repo{}
-	rep.sdrRepo = make([]SDRRecord, 0)
+	rep.sdrRepo = make([]*sDRRecordAndValue, 0)
 	return rep
 }
 
-func (rep *repo) addRecord(rec SDRRecord) {
+func (rep *repo) addRecord(rec *sDRRecordAndValue) {
 	rep.sdrRepo = append(rep.sdrRepo, rec)
 }
 
@@ -49,7 +55,7 @@ func (rep *repo) getRecordById(id uint16) ([]byte, uint16) {
 	//if not match, try to find the nearest one
 	var distance = uint16(0xffff)
 	var index = 0
-	var record SDRRecord
+	var record *sDRRecordAndValue
 	var next uint16
 	var data []byte
 	for i, rec := range rep.sdrRepo {
@@ -70,11 +76,11 @@ func (rep *repo) getRecordById(id uint16) ([]byte, uint16) {
 
 	switch record.RecordType() {
 	case SDR_RECORD_TYPE_FULL_SENSOR:
-		r, _ := record.(*SDRFullSensor)
+		r, _ := record.SDRRecord.(*SDRFullSensor)
 		data, _ = r.MarshalBinary()
 		break
 	case SDR_RECORD_TYPE_MC_DEVICE_LOCATOR:
-		r, _ := record.(*SDRMcDeviceLocator)
+		r, _ := record.SDRRecord.(*SDRMcDeviceLocator)
 		data, _ = r.MarshalBinary()
 		break
 	default:
@@ -110,4 +116,9 @@ func (s *Simulator) reserveRepository(*Message) Response {
 
 func (s *Simulator) getNextSDR(*Message) Response {
 	return nil
+}
+
+func (s *Simulator) getSensorReading(*Message) Response {
+	return nil
+
 }
