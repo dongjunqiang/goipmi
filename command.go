@@ -31,7 +31,9 @@ const (
 	CommandChassisStatus            = Command(0x01)
 	CommandSetSystemBootOptions     = Command(0x08)
 	CommandGetSystemBootOptions     = Command(0x09)
-	CommandGetSDRRepositoryInfo     = Command(0x20)
+	// CommandGetSDRRepositoryInfo     = Command(0x20)
+
+	// CommandGetReserveSDRRepo     	= Command(0x22)
 )
 
 // Request structure

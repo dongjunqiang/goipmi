@@ -19,7 +19,7 @@ package ipmi
 import (
 	"net"
 	"testing"
-
+	"fmt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -76,7 +76,9 @@ import (
 //	s.Stop()
 //}
 
-func TestRepositoryInfo(t *testing.T) {
+//   
+
+func TestGetReserveSDRRepoForReserveId(t *testing.T) {
 	s := NewSimulator(net.UDPAddr{})
 	err := s.Run()
 	assert.NoError(t, err)
@@ -87,18 +89,17 @@ func TestRepositoryInfo(t *testing.T) {
 	err = client.Open()
 	assert.NoError(t, err)
 
-	s.SetHandler(NetworkFunctionStorge, CommandGetSDRRepositoryInfo, func(*Message) Response {
-		return &SDRRepositoryInfoResponse{
+	s.SetHandler(NetworkFunctionStorge, CommandGetReserveSDRRepo, func(*Message) Response {
+		return &ReserveRepositoryResponse{
 			CompletionCode:   CommandCompleted,
-			RecordCount:      512,
-			OperationSupprot: 0x02,
+			ReservationId : 28661,
 		}
 	})
-
-	resp, err := client.RepositoryInfo()
+	fmt.Println("TestGetReserveSDRRepoForReserveId")
+	resp, err := client.GetReserveSDRRepoForReserveId()
 	assert.NoError(t, err)
 	assert.Equal(t, CommandCompleted, resp.CompletionCode)
-	assert.Equal(t, uint16(512), resp.RecordCount)
+	assert.Equal(t, uint16(28661), resp.ReservationId)
 	//assert.Equal(t, uint(8), resp.OperationSupprot)
 	//assert.Equal(t, test.String(), id.ManufacturerID.String())
 
