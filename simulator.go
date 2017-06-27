@@ -18,7 +18,7 @@ package ipmi
 
 import (
 	"bytes"
-	"fmt"
+	//"fmt"
 	"hash/adler32"
 	"log"
 	"net"
@@ -264,7 +264,6 @@ func (s *Simulator) serve() error {
 				log.Print(err)
 				continue
 			}
-			fmt.Println("rmcpClassASF")
 			response = s.asfCommand(m)
 		case rmcpClassIPMI:
 			m, err := messageFromBytes(buf[:n])
@@ -272,10 +271,8 @@ func (s *Simulator) serve() error {
 				log.Print(err)
 				continue
 			}
-			fmt.Println("rmcpClassIPMI")
 			response = s.ipmiCommand(m)
 		default:
-			fmt.Println("default")
 			log.Print(header.unsupportedClass())
 			continue
 		}
