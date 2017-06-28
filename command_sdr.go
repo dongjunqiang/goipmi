@@ -17,65 +17,27 @@ limitations under the License.
 package ipmi
 
 const (
-	CommandGetSDRRepositoryInfo     = Command(0x20)
-	CommandGetReserveSDRRepo     	= Command(0x22)
-	CommandGetSDR                   = Command(0x23)
+	CommandGetSDRRepositoryInfo = Command(0x20)
+	CommandGetReserveSDRRepo    = Command(0x22)
+	CommandGetSDR               = Command(0x23)
 )
 
 type ReserveSDRRepositoryRequest struct{}
+
 // section 33.11
 type ReserveRepositoryResponse struct {
 	CompletionCode
 	ReservationId uint16
 }
-type GetSDRCommandRequest struct{
-	ReservationID 			 uint16
-	RecordID	  			 uint16
-	OffsetIntoRecord		 uint8
-	ByteToRead	  			 uint8   //FFH means read entire record
+type GetSDRCommandRequest struct {
+	ReservationID    uint16
+	RecordID         uint16
+	OffsetIntoRecord uint8
+	ByteToRead       uint8 //FFH means read entire record
 }
-type GetSDRCommandResponse struct{
+
+type GetSDRCommandResponse struct {
 	CompletionCode
-	NextRecordID	  uint16
-	ReadData	  SDRFullSensor
+	NextRecordID uint16
+	ReadData     []byte
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

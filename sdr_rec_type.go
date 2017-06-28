@@ -25,9 +25,10 @@ import (
 )
 
 var (
-	ErrDeviceIdMustLess16 = errors.New("Device Id must be less or equal to 16 bytes length")
-	ErrUnitNotSupport     = errors.New("Unit not support, only support unsigned and 2's complement signed")
-	ErrMZero              = errors.New("M mustn't be 0")
+	ErrDeviceIdMustLess16  = errors.New("Device Id must be less or equal to 16 bytes length")
+	ErrUnitNotSupport      = errors.New("Unit not support, only support unsigned and 2's complement signed")
+	ErrMZero               = errors.New("M mustn't be 0")
+	ErrIdStringLenNotMatch = errors.New("Length of the Id string is mismatch")
 )
 
 type SDRRecord interface {
@@ -37,9 +38,9 @@ type SDRRecord interface {
 }
 
 type SDRRecordHeader struct {
-	recordId   uint16
+	Recordid   uint16
 	SDRVersion uint8
-	rtype      SDRRecordType
+	Rtype      SDRRecordType
 }
 
 // section 43.9
@@ -66,8 +67,8 @@ func NewSDRMcDeviceLocator(id uint16, name string) (*SDRMcDeviceLocator, error) 
 		return nil, ErrDeviceIdMustLess16
 	}
 	r := &SDRMcDeviceLocator{}
-	r.recordId = id
-	r.rtype = SDR_RECORD_TYPE_MC_DEVICE_LOCATOR
+	r.Recordid = id
+	r.Rtype = SDR_RECORD_TYPE_MC_DEVICE_LOCATOR
 	r.SDRVersion = 0x51
 	r.deviceId = name
 	return r, nil
@@ -78,11 +79,11 @@ func (r *SDRMcDeviceLocator) DeviceId() string {
 }
 
 func (r *SDRMcDeviceLocator) RecordId() uint16 {
-	return r.recordId
+	return r.Recordid
 }
 
 func (r *SDRMcDeviceLocator) RecordType() SDRRecordType {
-	return r.rtype
+	return r.Rtype
 }
 
 func (r *SDRMcDeviceLocator) MarshalBinary() (data []byte, err error) {
@@ -138,7 +139,7 @@ type sdrFullSensorFields struct { //size 42
 	L_NC                 uint8
 	PositiveHysteresis   uint8
 	NegativeHysteresis   uint8
-	reserved             [2]byte
+	Reserved             [2]byte
 	OEM                  uint8
 }
 
@@ -153,8 +154,8 @@ func NewSDRFullSensor(id uint16, name string) (*SDRFullSensor, error) {
 		return nil, ErrDeviceIdMustLess16
 	}
 	r := &SDRFullSensor{}
-	r.recordId = id
-	r.rtype = SDR_RECORD_TYPE_FULL_SENSOR
+	r.Recordid = id
+	r.Rtype = SDR_RECORD_TYPE_FULL_SENSOR
 	r.SDRVersion = 0x51
 	r.deviceId = name
 	return r, nil
@@ -165,11 +166,11 @@ func (r *SDRFullSensor) DeviceId() string {
 }
 
 func (r *SDRFullSensor) RecordId() uint16 {
-	return r.recordId
+	return r.Recordid
 }
 
 func (r *SDRFullSensor) RecordType() SDRRecordType {
-	return r.rtype
+	return r.Rtype
 }
 
 //M: 10bit signed 2's complement
@@ -295,6 +296,37 @@ func (r *SDRFullSensor) MarshalBinary() (data []byte, err error) {
 	hb.Write(fb.Bytes())
 	hb.Write(db.Bytes())
 	return hb.Bytes(), nil
+}
+
+func (r *SDRFullSensor) UnmarshalBinary(data []byte) error {
+	buffer := bytes.NewReader(data)
+	err := binary.Read(buffer, binary.LittleEndian, &r.SDRRecordHeader)
+	if err != nil {
+		return err
+	}
+
+	//skip the record length
+	_, err = buffer.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	binary.Read(buffer, binary.LittleEndian, &r.sdrFullSensorFields)
+
+	idLen, err := buffer.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	id := make([]byte, int(idLen))
+	n, err := buffer.Read(id)
+	if err != nil || n != int(idLen) {
+		return ErrIdStringLenNotMatch
+	}
+
+	r.deviceId = string(id)
+
+	return nil
 }
 
 type SDRCompactSensor struct {

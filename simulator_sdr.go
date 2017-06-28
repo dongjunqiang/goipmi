@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+var defaultRepo map[uint16]*repo
+
 const sdrOpSupport = SDR_OP_SUP_RESERVE_REPO
 
 // combine the SDRRecord and a float64 value
@@ -39,6 +41,28 @@ func NewRepo() *repo {
 	rep := &repo{}
 	rep.sdrRepo = make([]*sDRRecordAndValue, 0)
 	return rep
+}
+
+func (rep *repo) initRepoData() {
+
+	//this record is used to unit test
+	r1, _ := NewSDRFullSensor(1, "Fan 1")
+	r1.Unit = 0x00
+	r1.BaseUnit = 0x12
+	r1.SetMBExp(63, 0, 0, 0)
+	rep.addRecord(&sDRRecordAndValue{
+		SDRRecord: r1,
+		value:     2583.0,
+	})
+
+	r2, _ := NewSDRFullSensor(2, "CPU1 DTS")
+	r2.Unit = 0x80
+	r2.BaseUnit = 0x01
+	r2.SetMBExp(1, 0, 0, 0)
+	rep.addRecord(&sDRRecordAndValue{
+		SDRRecord: r2,
+		value:     -49.0,
+	})
 }
 
 func (rep *repo) addRecord(rec *sDRRecordAndValue) {
@@ -108,14 +132,38 @@ func (s *Simulator) reserveRepository(*Message) Response {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rId = uint16(r.Intn(65536))
 
+	if defaultRepo == nil {
+		defaultRepo = make(map[uint16]*repo)
+	}
+	defaultRepo[rId] = NewRepo()
+	defaultRepo[rId].initRepoData()
+
 	return &ReserveRepositoryResponse{
 		CompletionCode: CommandCompleted,
 		ReservationId:  rId,
 	}
 }
 
-func (s *Simulator) getNextSDR(*Message) Response {
-	return nil
+func (s *Simulator) getSDR(m *Message) Response {
+	request := &GetSDRCommandRequest{}
+	var rep *repo
+	var ok bool
+	if err := m.Request(request); err != nil {
+		return err
+	}
+
+	rId := request.ReservationID
+	if rep, ok = defaultRepo[rId]; !ok {
+		//TODO return err
+		panic("rId not found")
+	}
+
+	data, nid := rep.getRecordById(request.RecordID)
+	response := &GetSDRCommandResponse{}
+	response.CompletionCode = CommandCompleted
+	response.NextRecordID = nid
+	response.ReadData = data[request.OffsetIntoRecord : request.OffsetIntoRecord+request.ByteToRead]
+	return response
 }
 
 func (s *Simulator) getSensorReading(*Message) Response {

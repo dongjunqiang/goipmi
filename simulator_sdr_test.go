@@ -17,6 +17,7 @@ limitations under the License.
 package ipmi
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net"
@@ -58,6 +59,62 @@ func TestSimulatorSDR_L_GetRecord(t *testing.T) {
 	assert.Equal(t, uint16(0xffff), next2)
 }
 
+func TestSimulatorSDR_L_GetSDR(t *testing.T) {
+	s := NewSimulator(net.UDPAddr{Port: 0})
+	resp := s.reserveRepository(nil)
+	reserve, ok := resp.(*ReserveRepositoryResponse)
+	assert.True(t, ok)
+	assert.Equal(t, CommandCompleted, reserve.CompletionCode)
+
+	entire := new(bytes.Buffer)
+	//get first 5 bytes
+	getsdr_req := &GetSDRCommandRequest{}
+	getsdr_req.ReservationID = reserve.ReservationId
+	getsdr_req.RecordID = 0
+	getsdr_req.OffsetIntoRecord = 0
+	getsdr_req.ByteToRead = 5
+	m := &Message{}
+	m.Data = messageDataToBytes(getsdr_req)
+
+	rec_resp := s.getSDR(m)
+	rec, ok := rec_resp.(*GetSDRCommandResponse)
+	assert.True(t, ok)
+	assert.Equal(t, CommandCompleted, rec.CompletionCode)
+	assert.Equal(t, uint16(2), rec.NextRecordID)
+	//assert.Equal(t, 5, len(rec.ReadData))
+	//assert.Equal(t, byte(0x01), rec.ReadData[0])
+	//assert.Equal(t, byte(0x00), rec.ReadData[1])
+	//assert.Equal(t, byte(SDR_RECORD_TYPE_FULL_SENSOR), rec.ReadData[3])
+	remain := int(rec.ReadData[4])
+	fmt.Printf("remaining %d bytes\n", remain)
+	//copy
+	entire.Write(rec.ReadData)
+
+	//get remain bytes
+	getsdr_req.OffsetIntoRecord = 5
+	getsdr_req.ByteToRead = uint8(remain)
+	m.Data = messageDataToBytes(getsdr_req)
+	rec_resp = s.getSDR(m)
+	rec, ok = rec_resp.(*GetSDRCommandResponse)
+	assert.True(t, ok)
+	assert.Equal(t, CommandCompleted, rec.CompletionCode)
+	assert.Equal(t, uint16(2), rec.NextRecordID)
+	assert.Equal(t, remain, len(rec.ReadData))
+	entire.Write(rec.ReadData)
+
+	//Unmarshalbinary and assert
+	r2, _ := NewSDRFullSensor(0, "")
+	r2.UnmarshalBinary(entire.Bytes())
+	assert.Equal(t, uint16(1), r2.RecordId())
+	assert.Equal(t, SDRRecordType(SDR_RECORD_TYPE_FULL_SENSOR), r2.RecordType())
+	assert.Equal(t, "Fan 1", r2.DeviceId())
+	assert.Equal(t, uint8(0x00), r2.Unit)
+	assert.Equal(t, uint8(0x12), r2.BaseUnit)
+	M, _, _, _ := r2.GetMBExp()
+	assert.Equal(t, int16(63), M)
+
+}
+
 func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 	rep := NewRepo()
 	r1, _ := NewSDRMcDeviceLocator(1, "")
@@ -76,84 +133,4 @@ func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 		value:     33.6,
 	})
 
-}
-
-func TestSimulatorSDR_L_SetMBExp(t *testing.T) {
-	r2, _ := NewSDRFullSensor(2, "System 3.3V")
-	r2.SetMBExp(2, 0, 0, 0)
-	assert.Equal(t, uint16(0x0002), r2.MTol)
-	assert.Equal(t, uint16(0x0000), r2.Bacc)
-	r2.SetMBExp(-2, 5, 0, -2)
-	assert.Equal(t, uint16(0xc0fe), r2.MTol)
-	assert.Equal(t, uint16(0x0005), r2.Bacc)
-	assert.Equal(t, uint8(0xe0), r2.RBexp)
-	r2.SetMBExp(-2, -5, -2, -2)
-	assert.Equal(t, uint16(0xc0fe), r2.MTol)
-	assert.Equal(t, uint16(0xc0fb), r2.Bacc)
-	assert.Equal(t, uint8(0xee), r2.RBexp)
-}
-
-func TestSimulatorSDR_L_GetMBExp(t *testing.T) {
-	r1, _ := NewSDRFullSensor(2, "System 3.3V")
-	r1.SetMBExp(2, 0, 0, 0)
-	m1, b1, be1, re1 := r1.GetMBExp()
-	assert.Equal(t, int16(2), m1)
-	assert.Equal(t, int16(0), b1)
-	assert.Equal(t, int8(0), be1)
-	assert.Equal(t, int8(0), re1)
-
-	r1.SetMBExp(-2, 5, 0, -2)
-	m2, b2, be2, re2 := r1.GetMBExp()
-	assert.Equal(t, int16(-2), m2)
-	assert.Equal(t, int16(5), b2)
-	assert.Equal(t, int8(0), be2)
-	assert.Equal(t, int8(-2), re2)
-
-	r1.SetMBExp(-2, -5, -2, -2)
-	m3, b3, be3, re3 := r1.GetMBExp()
-	assert.Equal(t, int16(-2), m3)
-	assert.Equal(t, int16(-5), b3)
-	assert.Equal(t, int8(-2), be3)
-	assert.Equal(t, int8(-2), re3)
-}
-
-func TestSimulatorSDR_L_CalValue1(t *testing.T) {
-	r, _ := NewSDRFullSensor(2, "System 3.3V")
-	//r.Unit = 0x80 //2's complement signed
-	r.Unit = 0x00          //unsigned
-	r.BaseUnit = 0x04      //Voltage
-	r.Linearization = 0x00 //no linearization
-	r.SetMBExp(2, 0, 0, -2)
-	v := r.CalValue(3.36)
-	assert.Equal(t, uint8(0xa8), v)
-}
-
-func TestSimulatorSDR_L_CalValue2(t *testing.T) {
-	r, _ := NewSDRFullSensor(2, "Exhaust Temp")
-	r.Unit = 0x80          //2's complement signed
-	r.BaseUnit = 0x01      //Temprature
-	r.Linearization = 0x00 //no linearization
-	r.SetMBExp(1, 0, 0, 0)
-	v := r.CalValue(23.0)
-	assert.Equal(t, uint8(0x17), v)
-}
-
-func TestSimulatorSDR_L_CalValue3(t *testing.T) {
-	r, _ := NewSDRFullSensor(2, "CPU1 DTS")
-	r.Unit = 0x80          //2's complement signed
-	r.BaseUnit = 0x01      //Temprature
-	r.Linearization = 0x00 //no linearization
-	r.SetMBExp(1, 0, 0, 0)
-	v := r.CalValue(-49.0)
-	assert.Equal(t, uint8(0xcf), v)
-}
-
-func TestSimulatorSDR_L_CalValue4(t *testing.T) {
-	r, _ := NewSDRFullSensor(2, "Fan 1")
-	r.Unit = 0x00          //2's complement signed
-	r.BaseUnit = 0x12      //RPM
-	r.Linearization = 0x00 //no linearization
-	r.SetMBExp(63, 0, 0, 0)
-	v := r.CalValue(2583.0)
-	assert.Equal(t, uint8(0x29), v)
 }
