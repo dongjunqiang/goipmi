@@ -60,6 +60,8 @@ func NewSimulator(addr net.UDPAddr) *Simulator {
 
 	s.handlers[NetworkFunctionStorge] = map[Command]Handler{
 		CommandGetSDRRepositoryInfo: s.repositoryInfo,
+		CommandGetReserveSDRRepo:    s.reserveRepository,
+		CommandGetSDR:               s.getSDR,
 	}
 
 	// Built-in handlers for chassis commands
