@@ -16,6 +16,11 @@ limitations under the License.
 
 package ipmi
 
+import (
+	"bytes"
+	"encoding/binary"
+)
+
 const (
 	CommandGetSDRRepositoryInfo = Command(0x20)
 	CommandGetReserveSDRRepo    = Command(0x22)
@@ -40,4 +45,27 @@ type GetSDRCommandResponse struct {
 	CompletionCode
 	NextRecordID uint16
 	ReadData     []byte
+}
+
+func (r *GetSDRCommandResponse) MarshalBinary() (data []byte, err error) {
+	buffer := new(bytes.Buffer)
+	binary.Write(buffer, binary.LittleEndian, r.CompletionCode)
+	binary.Write(buffer, binary.LittleEndian, r.NextRecordID)
+	buf := make([]byte, 0)
+	buf = append(buf, buffer.Bytes()...)
+	buf = append(buf, r.ReadData...)
+	return buf, nil
+}
+
+func (r *GetSDRCommandResponse) UnmarshalBinary(data []byte) error {
+	buffer := bytes.NewBuffer(data)
+
+	var cc CompletionCode
+	var nrid uint16
+	binary.Read(buffer, binary.LittleEndian, &cc)
+	binary.Read(buffer, binary.LittleEndian, &nrid)
+	r.CompletionCode = cc
+	r.NextRecordID = nrid
+	r.ReadData = data[3:]
+	return nil
 }

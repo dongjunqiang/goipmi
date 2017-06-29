@@ -1,82 +1,79 @@
 package ipmi
 
-// RepositoryInfo get the Repository Info of the SDR
-// func (c *Client) GetSDRRepositoryInfo() (*SDRRepositoryInfoResponse, error) {
-// 	req := &Request{
-// 		NetworkFunctionStorge,
-// 		CommandGetSDRRepositoryInfo,
-// 		&SDRRepositoryInfoRequest{},
-// 	}
-// 	res := &SDRRepositoryInfoResponse{}
-// 	return res, c.Send(req, res)
-// }
-// RepositoryInfo get sdr
+import (
+	"bytes"
+	"fmt"
+)
 
-func (c *Client) GetSDR(reservationID uint16, recordID uint16) {
+// RepositoryInfo get the Repository Info of the SDR
+func (c *Client) RepositoryInfo() (*SDRRepositoryInfoResponse, error) {
+	req := &Request{
+		NetworkFunctionStorge,
+		CommandGetSDRRepositoryInfo,
+		&SDRRepositoryInfoRequest{},
+	}
+	res := &SDRRepositoryInfoResponse{}
+	return res, c.Send(req, res)
+}
+func (c *Client) GetReserveSDRRepoForReserveId() (*ReserveRepositoryResponse, error) {
+	req := &Request{
+		NetworkFunctionStorge,
+		CommandGetReserveSDRRepo,
+		&ReserveSDRRepositoryRequest{},
+	}
+	res := &ReserveRepositoryResponse{}
+	return res, c.send(req, res)
+}
+
+//Get SDR Command  33.12
+func (c *Client) GetSDR(reservationID uint16, recordID uint16) (record SDRRecord, next uint16) {
 
 	req := &Request{
 		NetworkFunctionStorge,
 		CommandGetSDR,
 		&GetSDRCommandRequest{
-			ReservationID: reservationID,
-			RecordID:      recordID,
+			ReservationID:    reservationID,
+			RecordID:         recordID,
+			OffsetIntoRecord: 0,
+			ByteToRead:       5,
 		},
 	}
-
-	res := &GetSDRCommandResponse{
-	//ReadData:SDRFullSensor{},
-	}
+	entire1 := new(bytes.Buffer)
+	res := &GetSDRCommandResponse{}
 	c.Send(req, res)
+	readData1 := res.ReadData
+	remain1 := readData1[4]
+	entire1.Write(res.ReadData)
 
-	// type SDRFullSensor struct {
-	// 	SDRRecordHeader
-	// 	sdrFullSensorFields
-	// 	deviceId string
-	// }
-	// type SDRRecordHeader struct {
-	// 	recordId   uint16
-	// 	SDRVersion uint8
-	// 	rtype      SDRRecordType
-	// }
-	// type sdrFullSensorFields struct { //size 42
-	// 	SensorOwnerId        uint8
-	// 	SensorOwnerLUN       uint8
-	// 	SensorNumber         uint8
-	// 	EntityId             uint8
-	// 	EntityIns            uint8
-	// 	SensorInit           uint8
-	// 	SensorCap            uint8
-	// 	SensorType           SDRSensorType
-	// 	ReadingType          SDRSensorReadingType
-	// 	AssertionEventMask   uint16
-	// 	DeassertionEventMask uint16
-	// 	DiscreteReadingMask  uint16
-	// 	Unit                 uint8
-	// 	BaseUnit             uint8
-	// 	ModifierUnit         uint8
-	// 	Linearization        uint8
-	// 	MTol                 uint16
-	// 	Bacc                 uint32
-	// 	AnalogFlag           uint8
-	// 	NominalReading       uint8
-	// 	NormalMax            uint8
-	// 	NormalMin            uint8
-	// 	SensorMax            uint8
-	// 	SensorMin            uint8
-	// 	U_NR                 uint8
-	// 	U_C                  uint8
-	// 	U_NC                 uint8
-	// 	L_NR                 uint8
-	// 	L_C                  uint8
-	// 	L_NC                 uint8
-	// 	PositiveHysteresis   uint8
-	// 	NegativeHysteresis   uint8
-	// 	reserved             [2]byte
-	// 	OEM                  uint8
-	// }
+	req2 := &Request{
+		NetworkFunctionStorge,
+		CommandGetSDR,
+		&GetSDRCommandRequest{
+			ReservationID:    reservationID,
+			RecordID:         recordID,
+			OffsetIntoRecord: 5,
+			ByteToRead:       uint8(remain1),
+		},
+	}
+	res2 := &GetSDRCommandResponse{}
+	c.Send(req2, res2)
+	entire1.Write(res2.ReadData)
 
-	//nextRecordID := res.NextRecordID
-	//readData := res.ReadData
-	//sensorType := readData.SensorType
+	//Unmarshalbinary and assert
+	r2, _ := NewSDRFullSensor(0, "")
+	r2.UnmarshalBinary(entire1.Bytes())
 
+	return r2, res2.NextRecordID
+}
+func (c *Client) GetSensorList(reservationID uint16, recordID uint16) {
+	var recordId uint16 = 0
+	i := 0
+	for recordId < 0xffff {
+		sdrRecord, nId := c.GetSDR(reservationID, recordId)
+		r2 := sdrRecord.(*SDRFullSensor)
+
+		recordId = nId
+		i = i+1
+	}
+	return 
 }
