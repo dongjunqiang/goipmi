@@ -49,6 +49,7 @@ func (rep *repo) initRepoData() {
 	r1, _ := NewSDRFullSensor(1, "Fan 1")
 	r1.Unit = 0x00
 	r1.BaseUnit = 0x12
+	r1.SensorNumber = 0x04
 	r1.SetMBExp(63, 0, 0, 0)
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
@@ -57,6 +58,7 @@ func (rep *repo) initRepoData() {
 
 	r2, _ := NewSDRFullSensor(2, "CPU1 DTS")
 	r2.Unit = 0x80
+	r2.SensorNumber = 0x05
 	r2.BaseUnit = 0x01
 	r2.SetMBExp(1, 0, 0, 0)
 	rep.addRecord(&sDRRecordAndValue{
@@ -165,8 +167,33 @@ func (s *Simulator) getSDR(m *Message) Response {
 	response.ReadData = data[request.OffsetIntoRecord : request.OffsetIntoRecord+request.ByteToRead]
 	return response
 }
+func (s *Simulator) getSensorReading(m *Message) Response {
+	request := &GetSensorReadingRequest{}
+	if err := m.Request(request); err != nil {
+		return err
+	}
+	sensorNum := request.SensorNumber
+	var rep *sDRRecordAndValue = nil
+	for _, value := range defaultRepo {
+		for _, sdrRepo2 := range value.sdrRepo {
+			sdrFullSensor := (sdrRepo2.SDRRecord).(*SDRFullSensor)
+			//fmt.Printf("bbbbbb","%T\n", sdrRepo2.SDRRecord) //test.Student
+			if sdrFullSensor.SensorNumber == sensorNum {
+				rep = sdrRepo2
+			}
+		}
+	}
+	if rep == nil {
+		return nil
+	} else {
+		sdrFullSensor2 := (rep.SDRRecord).(*SDRFullSensor)
+		value := rep.value
 
-func (s *Simulator) getSensorReading(*Message) Response {
-	return nil
+		sensorReading2 := sdrFullSensor2.CalValue(value)
+		response := &GetSensorReadingResponse{}
+		response.CompletionCode = CommandCompleted
+		response.SensorReading = sensorReading2
+		return response
+	}
 
 }

@@ -25,6 +25,7 @@ const (
 	CommandGetSDRRepositoryInfo = Command(0x20)
 	CommandGetReserveSDRRepo    = Command(0x22)
 	CommandGetSDR               = Command(0x23)
+	CommandGetSensorReading     = Command(0x2d)
 )
 
 type ReserveSDRRepositoryRequest struct{}
@@ -40,11 +41,21 @@ type GetSDRCommandRequest struct {
 	OffsetIntoRecord uint8
 	ByteToRead       uint8 //FFH means read entire record
 }
-
 type GetSDRCommandResponse struct {
 	CompletionCode
 	NextRecordID uint16
 	ReadData     []byte
+}
+type GetSensorReadingRequest struct {
+	SensorNumber uint8
+}
+
+// section 35.14
+type GetSensorReadingResponse struct {
+	CompletionCode
+	SensorReading uint8
+	EventMessage  uint8
+	//ThreadholdBaseSensor uint8
 }
 
 func (r *GetSDRCommandResponse) MarshalBinary() (data []byte, err error) {

@@ -81,10 +81,7 @@ func TestSimulatorSDR_L_GetSDR(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, CommandCompleted, rec.CompletionCode)
 	assert.Equal(t, uint16(2), rec.NextRecordID)
-	//assert.Equal(t, 5, len(rec.ReadData))
-	//assert.Equal(t, byte(0x01), rec.ReadData[0])
-	//assert.Equal(t, byte(0x00), rec.ReadData[1])
-	//assert.Equal(t, byte(SDR_RECORD_TYPE_FULL_SENSOR), rec.ReadData[3])
+
 	remain := int(rec.ReadData[4])
 	fmt.Printf("remaining %d bytes\n", remain)
 	//copy
@@ -133,4 +130,15 @@ func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 		value:     33.6,
 	})
 
+	// getSensorNum_req := &GetSensorReadingRequest{}
+	// getSensorNum_req.SensorNumber = 5
+
+	// m := &Message{}
+	// m.Data = messageDataToBytes(getsdr_req)
+
+	// senN_resp := s.getSensorReading(m)
+	// rec, ok := senN_resp.(*GetSensorReadingResponse)
+	// assert.True(t, ok)
+	// assert.Equal(t, CommandCompleted, rec.CompletionCode)
+	// assert.Equal(t, uint16(2), rec.NextRecordID)
 }

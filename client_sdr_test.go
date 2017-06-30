@@ -2,9 +2,10 @@ package ipmi
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRepositoryInfo(t *testing.T) {
@@ -27,7 +28,6 @@ func TestRepositoryInfo(t *testing.T) {
 		}
 	})
 
-	fmt.Println("TestRepositoryInfo")
 	resp, err := client.RepositoryInfo()
 	assert.NoError(t, err)
 	assert.Equal(t, CommandCompleted, resp.CompletionCode)
@@ -89,6 +89,7 @@ func TestGetSDR(t *testing.T) {
 	r.SDRVersion = 0x51
 	r.deviceId = "test deviceId"
 	r.Unit = 0x00
+	r.SensorNumber = 0x04
 	r.BaseUnit = 0x12
 	r.SetMBExp(63, 0, 0, 0)
 	data1, _ := r.MarshalBinary()
@@ -116,6 +117,31 @@ func TestGetSDR(t *testing.T) {
 	assert.NoError(t, err)
 	s.Stop()
 
+}
+func TestGetSensorReading(t *testing.T) {
+
+	s := NewSimulator(net.UDPAddr{})
+
+	err := s.Run()
+	assert.NoError(t, err)
+
+	client, err := NewClient(s.NewConnection())
+	assert.NoError(t, err)
+
+	s.SetHandler(NetworkFunctionSensorEvent, CommandGetSensorReading, func(m *Message) Response {
+		return &GetSensorReadingResponse{
+			CompletionCode: CommandCompleted,
+			SensorReading:  56,
+		}
+	})
+
+	err = client.Open()
+	assert.NoError(t, err)
+
+	if SensorReading, err := client.GetSensorReading(0x04); err == nil {
+		assert.Equal(t, uint8(56), SensorReading)
+		fmt.Println("SensorReading-====", SensorReading)
+	}
 }
 func TestGetSensorList(t *testing.T) {
 

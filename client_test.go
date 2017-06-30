@@ -17,10 +17,10 @@ limitations under the License.
 package ipmi
 
 import (
-	"net"
-	"testing"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"net"
+	"testing"
 )
 
 //func TestClient(t *testing.T) {
@@ -76,7 +76,7 @@ import (
 //	s.Stop()
 //}
 
-//   
+//
 
 func TestGetReserveSDRRepoForReserveId(t *testing.T) {
 	s := NewSimulator(net.UDPAddr{})
@@ -91,8 +91,8 @@ func TestGetReserveSDRRepoForReserveId(t *testing.T) {
 
 	s.SetHandler(NetworkFunctionStorge, CommandGetReserveSDRRepo, func(*Message) Response {
 		return &ReserveRepositoryResponse{
-			CompletionCode:   CommandCompleted,
-			ReservationId : 28661,
+			CompletionCode: CommandCompleted,
+			ReservationId:  28661,
 		}
 	})
 	fmt.Println("TestGetReserveSDRRepoForReserveId")
