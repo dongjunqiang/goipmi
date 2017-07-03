@@ -3,7 +3,6 @@ package ipmi
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math"
 )
 
@@ -28,9 +27,8 @@ func (c *Client) GetReserveSDRRepoForReserveId() (*ReserveRepositoryResponse, er
 }
 
 //Get SDR Command  33.12
-func (c *Client) GetSDR(reservationID uint16, recordID uint16) (record SDRRecord, next uint16) {
-
-	req := &Request{
+func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAndValue, next uint16) {
+	req_step1 := &Request{
 		NetworkFunctionStorge,
 		CommandGetSDR,
 		&GetSDRCommandRequest{
@@ -40,51 +38,80 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (record SDRRecord
 			ByteToRead:       5,
 		},
 	}
-	entire1 := new(bytes.Buffer)
-	res := &GetSDRCommandResponse{}
-	c.Send(req, res)
-	readData1 := res.ReadData
-	remain1 := readData1[4]
-	entire1.Write(res.ReadData)
-
-	req2 := &Request{
+	recordKeyBody_Data := new(bytes.Buffer)
+	res_step1 := &GetSDRCommandResponse{}
+	c.Send(req_step1, res_step1)
+	readData_step1 := res_step1.ReadData
+	recordType := readData_step1[3]
+	lenToRead_step2 := readData_step1[4]
+	recordKeyBody_Data.Write(readData_step1)
+	req_step2 := &Request{
 		NetworkFunctionStorge,
 		CommandGetSDR,
 		&GetSDRCommandRequest{
 			ReservationID:    reservationID,
 			RecordID:         recordID,
 			OffsetIntoRecord: 5,
-			ByteToRead:       uint8(remain1),
+			ByteToRead:       uint8(lenToRead_step2),
 		},
 	}
-	res2 := &GetSDRCommandResponse{}
-	c.Send(req2, res2)
-	entire1.Write(res2.ReadData)
-
-	//Unmarshalbinary and assert
-	r2, _ := NewSDRFullSensor(0, "")
-	r2.UnmarshalBinary(entire1.Bytes())
-
-	fmt.Println("GetSensorList r2.IDString=", r2.DeviceId())
-	m, b, bexp, rexp := r2.GetMBExp()
-
-	sensorReading, err := c.GetSensorReading(r2.SensorNumber)
-	if err != nil {
-
-	} else {
-		var result float64
-		switch (r2.Unit & 0xc0) >> 6 {
-		case 0:
-			result = (float64(m)*float64(sensorReading) + float64(b)*math.Pow(10, float64(bexp))) * math.Pow(10, float64(rexp))
-		case 1:
-		case 2:
-			fmt.Println("sensorReading==", int8(sensorReading))
-			result = (float64(int8(m)*int8(sensorReading)) + float64(b)*math.Pow(10, float64(rexp))) * math.Pow(10, float64(bexp))
+	res_step2 := &GetSDRCommandResponse{}
+	c.Send(req_step2, res_step2)
+	recordKeyBody_Data.Write(res_step2.ReadData)
+	var result float64
+	if recordType == SDR_RECORD_TYPE_FULL_SENSOR {
+		//Unmarshalbinary and assert
+		fullSensor, _ := NewSDRFullSensor(0, "")
+		var sdrRecordAndValue = &sDRRecordAndValue{}
+		fullSensor.UnmarshalBinary(recordKeyBody_Data.Bytes())
+		sdrRecordAndValue.SDRRecord = fullSensor
+		//threshold type
+		if fullSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
+			// has analog value
+			if fullSensor.Unit&0xc0 != 0xc0 {
+				m, b, bexp, rexp := fullSensor.GetMBExp()
+				sensorReading, err := c.GetSensorReading(fullSensor.SensorNumber)
+				if err != nil {
+					sdrRecordAndValue.avil = false
+					sdrRecordAndValue.value = 0.0
+				} else {
+					switch (fullSensor.Unit & 0xc0) >> 6 {
+					case 0:
+						result = (float64(m)*float64(sensorReading) + float64(b)*math.Pow(10, float64(bexp))) * math.Pow(10, float64(rexp))
+					case 1:
+					case 2:
+						result = (float64(int8(m)*int8(sensorReading)) + float64(b)*math.Pow(10, float64(rexp))) * math.Pow(10, float64(bexp))
+					}
+					sdrRecordAndValue.avil = true
+					sdrRecordAndValue.value = result
+				}
+			}
 		}
-		fmt.Println("result=", result)
+		return sdrRecordAndValue, res_step2.NextRecordID
+	} else if recordType == SDR_RECORD_TYPE_COMPACT_SENSOR {
+		//Unmarshalbinary and assert
+		var sdrRecordAndValue = &sDRRecordAndValue{}
+		compactSensor, _ := NewSDRCompactSensor(0, "")
+		compactSensor.UnmarshalBinary(recordKeyBody_Data.Bytes())
+		sdrRecordAndValue.SDRRecord = compactSensor
+		//threshold type
+		if compactSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
+			// has analog value
+			if compactSensor.Unit&0xc0 == 0xc0 {
+				sensorReading, err := c.GetSensorReading(compactSensor.SensorNumber)
+				if err != nil {
+					sdrRecordAndValue.avil = false
+					sdrRecordAndValue.value = 0.0
+				} else {
+					sdrRecordAndValue.avil = true
+					sdrRecordAndValue.value = float64(sensorReading)
+				}
+			}
+		}
+		return sdrRecordAndValue, res_step2.NextRecordID
 	}
 
-	return r2, res2.NextRecordID
+	return nil, res_step2.NextRecordID
 }
 
 //Get Sensor Reading  35.14
@@ -101,16 +128,21 @@ func (c *Client) GetSensorReading(sensorNum uint8) (sensorReading uint8, err err
 	if res == nil {
 		return uint8(0), errors.New("can not found sensor number")
 	}
-	readValue := res.SensorReading
+	if (res.ReadingAvail & 0x20) == 0 {
+		readValue := res.SensorReading
+		return readValue, nil
+	}
+	return uint8(0), errors.New("reading unAvailableß")
 
-	return readValue, nil
 }
-func (c *Client) GetSensorList(reservationID uint16, recordID uint16) {
+func (c *Client) GetSensorList(reservationID uint16, recordID uint16) []*sDRRecordAndValue {
 	var recordId uint16 = 0
+	var sdrRecAndVallist = make([]*sDRRecordAndValue, 20, 60)
 	for recordId < 0xffff {
-		_, nId := c.GetSDR(reservationID, recordId)
-		//r2 := sdrRecord.(*SDRFullSensor)
-		//fmt.Println("GetSensorList r2.IDString=",r2.DeviceId())
+		sdrRecordAndValue, nId := c.GetSDR(reservationID, recordId)
+		//r2 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor)
+		_ = append(sdrRecAndVallist, sdrRecordAndValue)
 		recordId = nId
 	}
+	return sdrRecAndVallist
 }

@@ -1,8 +1,8 @@
 package ipmi
 
 import (
-	"fmt"
 	"net"
+	//"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,7 +57,6 @@ func TestGetReserveSDRRepoForReserveId1(t *testing.T) {
 		}
 	})
 
-	fmt.Println("TestGetReserveSDRRepoForReserveId")
 	resp, err := client.GetReserveSDRRepoForReserveId()
 	assert.NoError(t, err)
 	assert.Equal(t, CommandCompleted, resp.CompletionCode)
@@ -84,7 +83,7 @@ func TestGetSDR(t *testing.T) {
 	assert.NoError(t, err)
 
 	r := &SDRFullSensor{}
-	r.Recordid = 34
+	r.Recordid = 5
 	r.Rtype = SDR_RECORD_TYPE_FULL_SENSOR
 	r.SDRVersion = 0x51
 	r.deviceId = "test deviceId"
@@ -96,7 +95,7 @@ func TestGetSDR(t *testing.T) {
 
 	response := &GetSDRCommandResponse{}
 	response.CompletionCode = CommandCompleted
-	response.NextRecordID = 12
+	response.NextRecordID = 65535
 
 	s.SetHandler(NetworkFunctionStorge, CommandGetSDR, func(m *Message) Response {
 		request := &GetSDRCommandRequest{}
@@ -107,11 +106,11 @@ func TestGetSDR(t *testing.T) {
 		return response
 	})
 
-	sdrRecord, nextRecordId := client.GetSDR(reserve.ReservationId, 0)
-	r2 := sdrRecord.(*SDRFullSensor)
+	sdrRecordAndValue, nextRecordId := client.GetSDR(reserve.ReservationId, 0)
+	r2 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor)
 	assert.Equal(t, SDRRecordType(SDR_RECORD_TYPE_FULL_SENSOR), r2.Rtype)
 	assert.Equal(t, "test deviceId", r2.DeviceId())
-	assert.Equal(t, uint16(12), nextRecordId)
+	assert.Equal(t, uint16(65535), nextRecordId)
 
 	err = client.Close()
 	assert.NoError(t, err)
@@ -140,7 +139,6 @@ func TestGetSensorReading(t *testing.T) {
 
 	if SensorReading, err := client.GetSensorReading(0x04); err == nil {
 		assert.Equal(t, uint8(56), SensorReading)
-		fmt.Println("SensorReading-====", SensorReading)
 	}
 }
 func TestGetSensorList(t *testing.T) {
@@ -157,6 +155,11 @@ func TestGetSensorList(t *testing.T) {
 
 	err = client.Open()
 	assert.NoError(t, err)
-	client.GetSensorList(reserve.ReservationId, 0)
+	_ = client.GetSensorList(reserve.ReservationId, 0)
 
+	//todo 获取到所有的sensorRecord，信息
+	//	for _, sdrRecordAndValue := range sdrRecAndVallist {
+	//		fmt.Println("type======", reflect.TypeOf(sdrRecordAndValue))
+	//		//fmt.Println("sdrRecordAndValue======", sdrRecordAndValue.RecordType())
+	//	}
 }

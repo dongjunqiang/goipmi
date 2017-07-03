@@ -19,9 +19,10 @@ package ipmi
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimulatorSDR_L_ReserveRepo(t *testing.T) {
@@ -41,10 +42,12 @@ func TestSimulatorSDR_L_GetRecord(t *testing.T) {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     -49.0,
+		avil:      true,
 	})
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     23.3,
+		avil:      true,
 	})
 	d0, next0 := rep.getRecordById(0)
 	assert.NotNil(t, d0)
@@ -112,6 +115,7 @@ func TestSimulatorSDR_L_GetSDR(t *testing.T) {
 
 }
 
+//todo
 func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 	rep := NewRepo()
 	r1, _ := NewSDRMcDeviceLocator(1, "")
@@ -124,21 +128,23 @@ func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     -49.0,
+		avil:      true,
 	})
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     33.6,
+		avil:      true,
 	})
 
-	// getSensorNum_req := &GetSensorReadingRequest{}
-	// getSensorNum_req.SensorNumber = 5
+	getSensorNum_req := &GetSensorReadingRequest{}
+	getSensorNum_req.SensorNumber = 5
 
-	// m := &Message{}
-	// m.Data = messageDataToBytes(getsdr_req)
+	//	m := &Message{}
+	//	m.Data = messageDataToBytes(getSensorNum_req)
 
-	// senN_resp := s.getSensorReading(m)
-	// rec, ok := senN_resp.(*GetSensorReadingResponse)
-	// assert.True(t, ok)
-	// assert.Equal(t, CommandCompleted, rec.CompletionCode)
-	// assert.Equal(t, uint16(2), rec.NextRecordID)
+	//	senN_resp := s.getSensorReading(m)
+	//	rec, ok := senN_resp.(*GetSensorReadingResponse)
+	//	assert.True(t, ok)
+	//	assert.Equal(t, CommandCompleted, rec.CompletionCode)
+	//	assert.Equal(t, uint16(2), rec.NextRecordID)
 }

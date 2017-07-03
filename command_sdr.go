@@ -54,7 +54,7 @@ type GetSensorReadingRequest struct {
 type GetSensorReadingResponse struct {
 	CompletionCode
 	SensorReading uint8
-	EventMessage  uint8
+	ReadingAvail  uint8
 	//ThreadholdBaseSensor uint8
 }
 
