@@ -16,10 +16,16 @@ limitations under the License.
 
 package ipmi
 
+import (
+	"bytes"
+	"encoding/binary"
+)
+
 const (
 	CommandGetSDRRepositoryInfo = Command(0x20)
 	CommandGetReserveSDRRepo    = Command(0x22)
 	CommandGetSDR               = Command(0x23)
+	CommandGetSensorReading     = Command(0x2d)
 )
 
 type ReserveSDRRepositoryRequest struct{}
@@ -35,9 +41,42 @@ type GetSDRCommandRequest struct {
 	OffsetIntoRecord uint8
 	ByteToRead       uint8 //FFH means read entire record
 }
-
 type GetSDRCommandResponse struct {
 	CompletionCode
 	NextRecordID uint16
 	ReadData     []byte
+}
+type GetSensorReadingRequest struct {
+	SensorNumber uint8
+}
+
+// section 35.14
+type GetSensorReadingResponse struct {
+	CompletionCode
+	SensorReading uint8
+	ReadingAvail  uint8
+	//ThreadholdBaseSensor uint8
+}
+
+func (r *GetSDRCommandResponse) MarshalBinary() (data []byte, err error) {
+	buffer := new(bytes.Buffer)
+	binary.Write(buffer, binary.LittleEndian, r.CompletionCode)
+	binary.Write(buffer, binary.LittleEndian, r.NextRecordID)
+	buf := make([]byte, 0)
+	buf = append(buf, buffer.Bytes()...)
+	buf = append(buf, r.ReadData...)
+	return buf, nil
+}
+
+func (r *GetSDRCommandResponse) UnmarshalBinary(data []byte) error {
+	buffer := bytes.NewBuffer(data)
+
+	var cc CompletionCode
+	var nrid uint16
+	binary.Read(buffer, binary.LittleEndian, &cc)
+	binary.Read(buffer, binary.LittleEndian, &nrid)
+	r.CompletionCode = cc
+	r.NextRecordID = nrid
+	r.ReadData = data[3:]
+	return nil
 }
