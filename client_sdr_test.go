@@ -3,6 +3,7 @@ package ipmi
 import (
 	"net"
 	//"reflect"
+	//"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,6 +117,45 @@ func TestGetSDR(t *testing.T) {
 	assert.NoError(t, err)
 	s.Stop()
 
+}
+
+func TestCalFullSensorValue(t *testing.T) {
+	fs1 := &SDRFullSensor{}
+	fs1.SetMBExp(8, 0, 0, 0)
+	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
+	fs1.Unit = 0x0
+	res, avail := CalFullSensorValue(fs1, 0x11)
+	assert.Equal(t, float64(136.0), res)
+	assert.Equal(t, true, avail)
+
+	fs1.SetMBExp(1, 0, 0, 0)
+	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
+	fs1.Unit = 0x80
+	res, avail = CalFullSensorValue(fs1, 0xcf)
+	assert.Equal(t, float64(-49.0), res)
+	assert.Equal(t, true, avail)
+
+	fs1.SetMBExp(2, 0, 0, -2)
+	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
+	fs1.Unit = 0x00
+	res, avail = CalFullSensorValue(fs1, 0xa8)
+	assert.Equal(t, float64(3.36), res)
+
+	fs1.SetMBExp(2, 0, 0, -2)
+	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
+	fs1.Unit = 0x00
+	res, avail = CalFullSensorValue(fs1, 0xa8)
+	assert.Equal(t, float64(3.36), res)
+
+	assert.Equal(t, true, avail)
+}
+func TestCalCompactSensorValue(t *testing.T) {
+	cs1 := &SDRCompactSensor{}
+	cs1.ReadingType = SENSOR_READTYPE_SENSORSPECIF
+	cs1.Unit = 0xc0
+	res, avail := CalCompactSensorValue(cs1, 0x11)
+	assert.Equal(t, float64(17), res)
+	assert.Equal(t, true, avail)
 }
 func TestGetSensorReading(t *testing.T) {
 

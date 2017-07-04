@@ -17,10 +17,10 @@ limitations under the License.
 package ipmi
 
 import (
-	"fmt"
 	//"fmt"
 	"math"
 	"math/rand"
+	//"reflect"
 	"time"
 )
 
@@ -47,9 +47,13 @@ func NewRepo() *repo {
 func (rep *repo) initRepoData() {
 
 	//this record is used to unit test
-	r1, _ := NewSDRFullSensor(1, "Fan 1")
+	r1, _ := NewSDRFullSensor(1, "Ambient Temp")
 	r1.Unit = 0x00
 	r1.BaseUnit = 0x12
+	r1.EntityId = 0x37
+	r1.EntityIns = 0x01
+	r1.SensorType = SDR_SENSOR_TYPECODES_TEMPERATURE
+	r1.BaseUnit = 0x01
 
 	r1.SensorNumber = 0x04
 	r1.ReadingType = SENSOR_READTYPE_THREADHOLD
@@ -178,7 +182,6 @@ func (s *Simulator) getSDR(m *Message) Response {
 	if err := m.Request(request); err != nil {
 		return err
 	}
-	fmt.Println("request.ReservationID==", request.ReservationID)
 	rId := request.ReservationID
 	if rep, ok = defaultRepo[rId]; !ok {
 		//TODO return err
@@ -210,17 +213,21 @@ func (s *Simulator) getSensorReading(m *Message) Response {
 	if rep == nil {
 		return nil
 	} else {
-		sdrFullSensor2 := (rep.SDRRecord).(*SDRFullSensor)
-
-		value := rep.value
-		sensorReading2 := sdrFullSensor2.CalValue(value)
 		response := &GetSensorReadingResponse{}
-		response.CompletionCode = CommandCompleted
-		response.SensorReading = sensorReading2
-		if rep.avail == true {
-			response.ReadingAvail = 0x20
+		value := rep.value
+		if sdrFullSensor2, ok := (rep.SDRRecord).(*SDRFullSensor); ok {
+			sensorReading2 := sdrFullSensor2.CalValue(value)
+			response.SensorReading = sensorReading2
 		} else {
-			response.ReadingAvail = 0x10
+			response.SensorReading = uint8(value)
+		}
+		response.CompletionCode = CommandCompleted
+		if rep.avail == true {
+			//response.ReadingAvail & 0x20 != 0    (11 10 01 00) 000000
+			response.ReadingAvail = 0x0
+		} else {
+			//response.ReadingAvail & 0x20 = 0 (11 10 01 00) 100000
+			response.ReadingAvail = 0x20
 		}
 		return response
 	}

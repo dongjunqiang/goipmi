@@ -107,7 +107,7 @@ func TestSimulatorSDR_L_GetSDR(t *testing.T) {
 	r2.UnmarshalBinary(entire.Bytes())
 	assert.Equal(t, uint16(1), r2.RecordId())
 	assert.Equal(t, SDRRecordType(SDR_RECORD_TYPE_FULL_SENSOR), r2.RecordType())
-	assert.Equal(t, "Fan 1", r2.DeviceId())
+	assert.Equal(t, "Ambient Temp", r2.DeviceId())
 	assert.Equal(t, uint8(0x00), r2.Unit)
 	assert.Equal(t, uint8(0x12), r2.BaseUnit)
 	M, _, _, _ := r2.GetMBExp()

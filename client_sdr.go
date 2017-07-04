@@ -3,8 +3,9 @@ package ipmi
 import (
 	"bytes"
 	"errors"
-	//"fmt"
+	"fmt"
 	"math"
+	//"reflect"
 )
 
 // RepositoryInfo get the Repository Info of the SDR
@@ -63,54 +64,54 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 	return sdrRecordAndValue, res_step2.NextRecordID
 }
 func (c *Client) CalSdrRecordValue(recordType uint8, recordKeyBody_Data *bytes.Buffer) *sDRRecordAndValue {
+	var sdrRecordAndValue = &sDRRecordAndValue{}
 	if recordType == SDR_RECORD_TYPE_FULL_SENSOR {
 		//Unmarshalbinary and assert
 		fullSensor, _ := NewSDRFullSensor(0, "")
-		var sdrRecordAndValue = &sDRRecordAndValue{}
+
 		fullSensor.UnmarshalBinary(recordKeyBody_Data.Bytes())
 		sdrRecordAndValue.SDRRecord = fullSensor
-		res, avai := c.CalFullSensorValue(fullSensor)
-		sdrRecordAndValue.avail = avai
-		sdrRecordAndValue.value = res
+		sensorReading, err := c.GetSensorReading(fullSensor.SensorNumber)
+		if err != nil {
+			sdrRecordAndValue.avail = false
+			sdrRecordAndValue.value = 0.00
+		} else {
+			res, avai := CalFullSensorValue(fullSensor, sensorReading)
+			sdrRecordAndValue.avail = avai
+			sdrRecordAndValue.value = res
+		}
 		return sdrRecordAndValue
 	} else if recordType == SDR_RECORD_TYPE_COMPACT_SENSOR {
 		//Unmarshalbinary and assert
-		var sdrRecordAndValue = &sDRRecordAndValue{}
 		compactSensor, _ := NewSDRCompactSensor(0, "")
 		compactSensor.UnmarshalBinary(recordKeyBody_Data.Bytes())
 		sdrRecordAndValue.SDRRecord = compactSensor
-		//threshold type
-		if compactSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
-			// has analog value
-			if compactSensor.Unit&0xc0 == 0xc0 {
-				sensorReading, err := c.GetSensorReading(compactSensor.SensorNumber)
-				if err != nil {
-					sdrRecordAndValue.avail = false
-					sdrRecordAndValue.value = 0.0
-				} else {
-					sdrRecordAndValue.avail = true
-					sdrRecordAndValue.value = float64(sensorReading)
-				}
-			}
+		sensorReading, err := c.GetSensorReading(compactSensor.SensorNumber)
+		if err != nil {
+			sdrRecordAndValue.avail = false
+			sdrRecordAndValue.value = 0.00
+		} else {
+			res, avai := CalCompactSensorValue(compactSensor, sensorReading)
+			sdrRecordAndValue.avail = avai
+			sdrRecordAndValue.value = res
 		}
 		return sdrRecordAndValue
+	} else if recordType == SDR_RECORD_TYPE_MC_DEVICE_LOCATOR {
+		//var sdrRecordAndValue = &sDRRecordAndValue{}
+		//compactSensor, _ := NewSDRCompactSensor(0, "")
 	}
 	return nil
 }
 
-func (c *Client) CalFullSensorValue(fullSensor *SDRFullSensor) (float64, bool) {
-	var result float64
-	var avail bool
-	//threshold type
-	if fullSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
-		// has analog value
-		if fullSensor.Unit&0xc0 != 0xc0 {
-			m, b, bexp, rexp := fullSensor.GetMBExp()
-			sensorReading, err := c.GetSensorReading(fullSensor.SensorNumber)
-			if err != nil {
-				result = 0.0
-				avail = false
-			} else {
+func CalFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
+	if fullSensor, err := sdrRecord.(*SDRFullSensor); err {
+		var result float64
+		var avail bool
+		//threshold type
+		if fullSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
+			// has analog value
+			if fullSensor.Unit&0xc0 != 0xc0 {
+				m, b, bexp, rexp := fullSensor.GetMBExp()
 				switch (fullSensor.Unit & 0xc0) >> 6 {
 				case 0:
 					result = (float64(m)*float64(sensorReading) + float64(b)*math.Pow(10, float64(bexp))) * math.Pow(10, float64(rexp))
@@ -119,10 +120,50 @@ func (c *Client) CalFullSensorValue(fullSensor *SDRFullSensor) (float64, bool) {
 					result = (float64(int8(m)*int8(sensorReading)) + float64(b)*math.Pow(10, float64(rexp))) * math.Pow(10, float64(bexp))
 				}
 				avail = true
+
+			}
+		}
+		return result, avail
+	}
+
+	return 0, true
+}
+func CalCompactSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
+	var value float64 = 0.0
+	var avail bool = false
+	if compactSensor, err := sdrRecord.(*SDRCompactSensor); err {
+		//threshold type
+		if compactSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
+			// has analog value
+			if compactSensor.Unit&0xc0 == 0xc0 {
+				avail = true
+				value = float64(sensorReading)
+			} else {
+				avail = false
+				value = 0.0
+			}
+		} else if compactSensor.ReadingType == SENSOR_READTYPE_SENSORSPECIF {
+			// has analog value
+			fmt.Println(compactSensor.Unit & 0xc0)
+			if compactSensor.Unit&0xc0 == 0xc0 {
+				avail = true
+				value = float64(sensorReading)
+			} else {
+				avail = false
+				value = 0.0
+			}
+		} else if compactSensor.ReadingType >= SENSOR_READTYPE_GENERIC_L && compactSensor.ReadingType <= SENSOR_READTYPE_GENERIC_L {
+			// has analog value
+			if compactSensor.Unit&0xc0 == 0xc0 {
+				avail = true
+				value = float64(sensorReading)
+			} else {
+				avail = false
+				value = 0.0
 			}
 		}
 	}
-	return result, avail
+	return value, avail
 }
 
 //Get Sensor Reading  35.14
