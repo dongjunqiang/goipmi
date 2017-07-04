@@ -32,7 +32,7 @@ const sdrOpSupport = SDR_OP_SUP_RESERVE_REPO
 type sDRRecordAndValue struct {
 	SDRRecord
 	value float64
-	avil  bool
+	avail bool
 }
 
 type repo struct {
@@ -57,7 +57,7 @@ func (rep *repo) initRepoData() {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     2583.0,
-		avil:      true,
+		avail:     true,
 	})
 
 	r2, _ := NewSDRFullSensor(2, "CPU1 DTS")
@@ -69,7 +69,7 @@ func (rep *repo) initRepoData() {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     -49.0,
-		avil:      true,
+		avail:     true,
 	})
 	//todo 测试更多类型的sensorRecord
 	//	r4, _ := NewSDRFullSensor(2, "CPU1 DTS")
@@ -81,14 +81,14 @@ func (rep *repo) initRepoData() {
 	//	rep.addRecord(&sDRRecordAndValue{
 	//		SDRRecord: r4,
 	//		value:     -49.0,
-	//		avil:      true,
+	//		avail:      true,
 	//	})
 
 	//	r3, _ := NewSDRCompactSensor(2, "CPU1 DTS")
 	//	rep.addRecord(&sDRRecordAndValue{
 	//		SDRRecord: r3,
 	//		value:     -49.0,
-	//		avil:      false,
+	//		avail:      false,
 	//	})
 }
 
@@ -217,7 +217,7 @@ func (s *Simulator) getSensorReading(m *Message) Response {
 		response := &GetSensorReadingResponse{}
 		response.CompletionCode = CommandCompleted
 		response.SensorReading = sensorReading2
-		if rep.avil == true {
+		if rep.avail == true {
 			response.ReadingAvail = 0x20
 		} else {
 			response.ReadingAvail = 0x10

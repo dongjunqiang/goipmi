@@ -42,12 +42,12 @@ func TestSimulatorSDR_L_GetRecord(t *testing.T) {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     -49.0,
-		avil:      true,
+		avail:     true,
 	})
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     23.3,
-		avil:      true,
+		avail:     true,
 	})
 	d0, next0 := rep.getRecordById(0)
 	assert.NotNil(t, d0)
@@ -128,12 +128,12 @@ func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     -49.0,
-		avil:      true,
+		avail:     true,
 	})
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     33.6,
-		avil:      true,
+		avail:     true,
 	})
 
 	getSensorNum_req := &GetSensorReadingRequest{}

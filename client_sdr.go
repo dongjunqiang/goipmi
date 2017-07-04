@@ -39,6 +39,7 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 		},
 	}
 	recordKeyBody_Data := new(bytes.Buffer)
+	fmt.Println(fmt.Println("type======", reflect.TypeOf(recordKeyBody_Data)))
 	res_step1 := &GetSDRCommandResponse{}
 	c.Send(req_step1, res_step1)
 	readData_step1 := res_step1.ReadData
@@ -58,6 +59,10 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 	res_step2 := &GetSDRCommandResponse{}
 	c.Send(req_step2, res_step2)
 	recordKeyBody_Data.Write(res_step2.ReadData)
+	return nil, res_step2.NextRecordID
+}
+func (c *Client) CalSdrRecordValue(recordType uint8, buffer *Buffer) {
+
 	var result float64
 	if recordType == SDR_RECORD_TYPE_FULL_SENSOR {
 		//Unmarshalbinary and assert
@@ -72,7 +77,7 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 				m, b, bexp, rexp := fullSensor.GetMBExp()
 				sensorReading, err := c.GetSensorReading(fullSensor.SensorNumber)
 				if err != nil {
-					sdrRecordAndValue.avil = false
+					sdrRecordAndValue.avail = false
 					sdrRecordAndValue.value = 0.0
 				} else {
 					switch (fullSensor.Unit & 0xc0) >> 6 {
@@ -82,7 +87,7 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 					case 2:
 						result = (float64(int8(m)*int8(sensorReading)) + float64(b)*math.Pow(10, float64(rexp))) * math.Pow(10, float64(bexp))
 					}
-					sdrRecordAndValue.avil = true
+					sdrRecordAndValue.avail = true
 					sdrRecordAndValue.value = result
 				}
 			}
@@ -100,18 +105,16 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 			if compactSensor.Unit&0xc0 == 0xc0 {
 				sensorReading, err := c.GetSensorReading(compactSensor.SensorNumber)
 				if err != nil {
-					sdrRecordAndValue.avil = false
+					sdrRecordAndValue.avail = false
 					sdrRecordAndValue.value = 0.0
 				} else {
-					sdrRecordAndValue.avil = true
+					sdrRecordAndValue.avail = true
 					sdrRecordAndValue.value = float64(sensorReading)
 				}
 			}
 		}
 		return sdrRecordAndValue, res_step2.NextRecordID
 	}
-
-	return nil, res_step2.NextRecordID
 }
 
 //Get Sensor Reading  35.14
