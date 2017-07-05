@@ -53,24 +53,24 @@ var sdrRecordValueBasicUnit []string = []string{
 	"byte", "kilobyte", "megabyte", "gigabyte", "word", "dword",
 	"qword", "line", "hit", "miss", "retry", "reset",
 	"overflow", "underrun", "collision", "packets", "messages",
-	"characters", "error", "correctable error", "uncorrectable error"
-}
+	"characters", "error", "correctable error", "uncorrectable error"}
 var sdrRecordValueSensorType []string = []string{
-		"reserved",
-        "Temperature", "Voltage", "Current", "Fan",
-        "Physical Security", "Platform Security", "Processor",
-        "Power Supply", "Power Unit", "Cooling Device", "Other",
-        "Memory", "Drive Slot / Bay", "POST Memory Resize",
-        "System Firmwares", "Event Logging Disabled", "Watchdog1",
-        "System Event", "Critical Interrupt", "Button",
-        "Module / Board", "Microcontroller", "Add-in Card",
-        "Chassis", "Chip Set", "Other FRU", "Cable / Interconnect",
-        "Terminator", "System Boot Initiated", "Boot Error",
-        "OS Boot", "OS Critical Stop", "Slot / Connector",
-        "System ACPI Power State", "Watchdog2", "Platform Alert",
-        "Entity Presence", "Monitor ASIC", "LAN",
-        "Management Subsys Health", "Battery", "Session Audit",
-        "Version Change", "FRU State" };
+	"reserved",
+	"Temperature", "Voltage", "Current", "Fan",
+	"Physical Security", "Platform Security", "Processor",
+	"Power Supply", "Power Unit", "Cooling Device", "Other",
+	"Memory", "Drive Slot / Bay", "POST Memory Resize",
+	"System Firmwares", "Event Logging Disabled", "Watchdog1",
+	"System Event", "Critical Interrupt", "Button",
+	"Module / Board", "Microcontroller", "Add-in Card",
+	"Chassis", "Chip Set", "Other FRU", "Cable / Interconnect",
+	"Terminator", "System Boot Initiated", "Boot Error",
+	"OS Boot", "OS Critical Stop", "Slot / Connector",
+	"System ACPI Power State", "Watchdog2", "Platform Alert",
+	"Entity Presence", "Monitor ASIC", "LAN",
+	"Management Subsys Health", "Battery", "Session Audit",
+	"Version Change", "FRU State"}
+
 type SDRRecord interface {
 	DeviceId() string
 	RecordId() uint16

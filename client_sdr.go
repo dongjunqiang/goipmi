@@ -41,7 +41,7 @@ func (c *Client) GetSensorList(reservationID uint16) ([]SdrSensorInfo, error) {
 		if err == nil {
 			if fullSensor, ok1 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor); ok1 {
 				if fullSensor.BaseUnit >= 0 && fullSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) &&
-					fullSensor.SensorType >= 0 && fullSensor.SensorType < uint8(len(sdrRecordValueSensorType)) {
+					fullSensor.SensorType >= 0 && uint8(fullSensor.SensorType) < uint8(len(sdrRecordValueSensorType)) {
 					sdrSensorInfolist = append(sdrSensorInfolist, SdrSensorInfo{
 						sdrRecordValueSensorType[fullSensor.SensorType],
 						sdrRecordValueBasicUnit[fullSensor.BaseUnit],
@@ -52,7 +52,7 @@ func (c *Client) GetSensorList(reservationID uint16) ([]SdrSensorInfo, error) {
 				}
 			} else if compactSensor, ok2 := sdrRecordAndValue.SDRRecord.(*SDRCompactSensor); ok2 {
 				if compactSensor.BaseUnit >= 0 && compactSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) &&
-					compactSensor.SensorType >= 0 && compactSensor.SensorType < uint8(len(sdrRecordValueSensorType)) {
+					compactSensor.SensorType >= 0 && uint8(compactSensor.SensorType) < uint8(len(sdrRecordValueSensorType)) {
 					sdrSensorInfolist = append(sdrSensorInfolist, SdrSensorInfo{
 						sdrRecordValueSensorType[compactSensor.SensorType],
 						sdrRecordValueBasicUnit[compactSensor.BaseUnit],
@@ -141,7 +141,7 @@ func (c *Client) CalSdrRecordValue(recordType uint8, recordKeyBody_Data *bytes.B
 }
 func calFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
 	if fullSensor, err := sdrRecord.(*SDRFullSensor); err {
-		var result float64
+		var result float64 = 0.0
 		var avail bool
 		//threshold type
 		if fullSensor.ReadingType == SENSOR_READTYPE_THREADHOLD {
@@ -156,12 +156,14 @@ func calFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool
 					result = (float64(int8(m)*int8(sensorReading)) + float64(b)*math.Pow(10, float64(rexp))) * math.Pow(10, float64(bexp))
 				}
 				avail = true
+			} else {
+				avail = false
 			}
 		}
 		return result, avail
 	}
 
-	return 0, true
+	return float64(0), false
 }
 func calCompactSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
 	var value float64 = 0.0

@@ -208,6 +208,8 @@ func TestGetSensorReading(t *testing.T) {
 		assert.Equal(t, uint8(56), SensorReading)
 	}
 }
+
+//用与实际采集的数据完全相同进行测试
 func TestGetSensorList(t *testing.T) {
 
 	s := NewSimulator(net.UDPAddr{})
@@ -227,11 +229,13 @@ func TestGetSensorList(t *testing.T) {
 	r1.Recordid = 5
 	r1.Rtype = SDR_RECORD_TYPE_FULL_SENSOR
 	r1.SDRVersion = 0x51
-	r1.deviceId = "fullsensor deviceid"
-	r1.Unit = 0x00
+	r1.deviceId = "Fan 5"
+	r1.Unit = 0x0
 	r1.SensorNumber = 0x04
+	r1.SensorType = SDR_SENSOR_TYPECODES_FAN
 	r1.BaseUnit = 0x12
 	r1.SetMBExp(63, 0, 0, 0)
+	r1.ReadingType = SENSOR_READTYPE_THREADHOLD
 	data1, _ := r1.MarshalBinary()
 
 	response := &GetSDRCommandResponse{}
@@ -246,9 +250,27 @@ func TestGetSensorList(t *testing.T) {
 		response.ReadData = data1[request.OffsetIntoRecord : request.OffsetIntoRecord+request.ByteToRead]
 		return response
 	})
+
+	res_senReading := &GetSensorReadingResponse{}
+	res_senReading.CompletionCode = CommandCompleted
+	res_senReading.SensorReading = 0x2a
+	res_senReading.ReadingAvail = 0xc0
+	s.SetHandler(NetworkFunctionSensorEvent, CommandGetSensorReading, func(m *Message) Response {
+		return res_senReading
+	})
+
 	sdrSensorInfoList, err := client.GetSensorList(reserve.ReservationId)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 1, len(sdrSensorInfoList))
-	assert.Equal(t, "fullsensor deviceid", sdrSensorInfoList[0].DeviceId)
-	assert.Equal(t, "RPM", sdrSensorInfoList[0].BaseUnit)
+	if err == nil {
+		assert.Equal(t, 1, len(sdrSensorInfoList))
+		if len(sdrSensorInfoList) >= 1 {
+			assert.Equal(t, "Fan", sdrSensorInfoList[0].SensorType)
+			assert.Equal(t, float64(2646), sdrSensorInfoList[0].Value)
+			assert.Equal(t, "Fan 5", sdrSensorInfoList[0].DeviceId)
+			assert.Equal(t, "RPM", sdrSensorInfoList[0].BaseUnit)
+			assert.Equal(t, true, sdrSensorInfoList[0].avail)
+		}
+
+	}
+
 }
