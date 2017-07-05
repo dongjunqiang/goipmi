@@ -18,8 +18,9 @@ package ipmi
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSDRRecType_McDeviceLocator(t *testing.T) {
@@ -27,8 +28,6 @@ func TestSDRRecType_McDeviceLocator(t *testing.T) {
 	deviceId := "AST2400"
 	rec, err := NewSDRMcDeviceLocator(uint16(1), deviceId)
 	assert.Nil(t, err)
-	fmt.Println("DeviceId: ", rec.DeviceId())
-	fmt.Println("RecordId: ", rec.RecordId())
 
 	rec.sdrMcDeviceLocatorFields = sdrMcDeviceLocatorFields{
 		DeviceSlaveAddr: 0x20,

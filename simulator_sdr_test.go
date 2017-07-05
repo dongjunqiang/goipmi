@@ -42,12 +42,12 @@ func TestSimulatorSDR_L_GetRecord(t *testing.T) {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     -49.0,
-		avil:      true,
+		avail:     true,
 	})
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     23.3,
-		avil:      true,
+		avail:     true,
 	})
 	d0, next0 := rep.getRecordById(0)
 	assert.NotNil(t, d0)
@@ -107,9 +107,9 @@ func TestSimulatorSDR_L_GetSDR(t *testing.T) {
 	r2.UnmarshalBinary(entire.Bytes())
 	assert.Equal(t, uint16(1), r2.RecordId())
 	assert.Equal(t, SDRRecordType(SDR_RECORD_TYPE_FULL_SENSOR), r2.RecordType())
-	assert.Equal(t, "Fan 1", r2.DeviceId())
+	assert.Equal(t, "Ambient Temp", r2.DeviceId())
 	assert.Equal(t, uint8(0x00), r2.Unit)
-	assert.Equal(t, uint8(0x12), r2.BaseUnit)
+	assert.Equal(t, uint8(0x1), r2.BaseUnit)
 	M, _, _, _ := r2.GetMBExp()
 	assert.Equal(t, int16(63), M)
 
@@ -117,6 +117,8 @@ func TestSimulatorSDR_L_GetSDR(t *testing.T) {
 
 //todo
 func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
+	s := &Simulator{}
+
 	rep := NewRepo()
 	r1, _ := NewSDRMcDeviceLocator(1, "")
 	r2, _ := NewSDRFullSensor(2, "System 3.3V")
@@ -128,23 +130,23 @@ func TestSimulatorSDR_L_GetSensorReading(t *testing.T) {
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     -49.0,
-		avil:      true,
+		avail:     true,
 	})
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     33.6,
-		avil:      true,
+		avail:     true,
 	})
 
 	getSensorNum_req := &GetSensorReadingRequest{}
 	getSensorNum_req.SensorNumber = 5
 
-	//	m := &Message{}
-	//	m.Data = messageDataToBytes(getSensorNum_req)
+	m := &Message{}
+	m.Data = messageDataToBytes(getSensorNum_req)
 
-	//	senN_resp := s.getSensorReading(m)
-	//	rec, ok := senN_resp.(*GetSensorReadingResponse)
-	//	assert.True(t, ok)
-	//	assert.Equal(t, CommandCompleted, rec.CompletionCode)
-	//	assert.Equal(t, uint16(2), rec.NextRecordID)
+	senN_resp := s.getSensorReading(m)
+	rec, ok := senN_resp.(*GetSensorReadingResponse)
+	assert.True(t, ok)
+	assert.Equal(t, CommandCompleted, rec.CompletionCode)
+	assert.Equal(t, uint8(0xcf), rec.SensorReading)
 }

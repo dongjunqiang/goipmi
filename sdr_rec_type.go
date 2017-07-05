@@ -25,11 +25,51 @@ import (
 )
 
 var (
-	ErrDeviceIdMustLess16  = errors.New("Device Id must be less or equal to 16 bytes length")
-	ErrUnitNotSupport      = errors.New("Unit not support, only support unsigned and 2's complement signed")
-	ErrMZero               = errors.New("M mustn't be 0")
-	ErrIdStringLenNotMatch = errors.New("Length of the Id string is mismatch")
+	ErrDeviceIdMustLess16   = errors.New("Device Id must be less or equal to 16 bytes length")
+	ErrUnitNotSupport       = errors.New("Unit not support, only support unsigned and 2's complement signed")
+	ErrMZero                = errors.New("M mustn't be 0")
+	ErrIdStringLenNotMatch  = errors.New("Length of the Id string is mismatch")
+	ErrSensorReadUnavail    = errors.New("Sensor Reading Unavailable")
+	ErrNotFoundTheSensorNum = errors.New("failed to found the SensorNumber")
 )
+
+var sdrRecordValueBasicUnit []string = []string{
+	"unspecified",
+	"degrees C", "degrees F", "degrees K",
+	"Volts", "Amps", "Watts", "Joules",
+	"Coulombs", "VA", "Nits",
+	"lumen", "lux", "Candela",
+	"kPa", "PSI", "Newton",
+	"CFM", "RPM", "Hz",
+	"microsecond", "millisecond", "second", "minute", "hour",
+	"day", "week", "mil", "inches", "feet", "cu in", "cu feet",
+	"mm", "cm", "m", "cu cm", "cu m", "liters", "fluid ounce",
+	"radians", "steradians", "revolutions", "cycles",
+	"gravities", "ounce", "pound", "ft-lb", "oz-in", "gauss",
+	"gilberts", "henry", "millihenry", "farad", "microfarad",
+	"ohms", "siemens", "mole", "becquerel", "PPM", "reserved",
+	"Decibels", "DbA", "DbC", "gray", "sievert",
+	"color temp deg K", "bit", "kilobit", "megabit", "gigabit",
+	"byte", "kilobyte", "megabyte", "gigabyte", "word", "dword",
+	"qword", "line", "hit", "miss", "retry", "reset",
+	"overflow", "underrun", "collision", "packets", "messages",
+	"characters", "error", "correctable error", "uncorrectable error"}
+var sdrRecordValueSensorType []string = []string{
+	"reserved",
+	"Temperature", "Voltage", "Current", "Fan",
+	"Physical Security", "Platform Security", "Processor",
+	"Power Supply", "Power Unit", "Cooling Device", "Other",
+	"Memory", "Drive Slot / Bay", "POST Memory Resize",
+	"System Firmwares", "Event Logging Disabled", "Watchdog1",
+	"System Event", "Critical Interrupt", "Button",
+	"Module / Board", "Microcontroller", "Add-in Card",
+	"Chassis", "Chip Set", "Other FRU", "Cable / Interconnect",
+	"Terminator", "System Boot Initiated", "Boot Error",
+	"OS Boot", "OS Critical Stop", "Slot / Connector",
+	"System ACPI Power State", "Watchdog2", "Platform Alert",
+	"Entity Presence", "Monitor ASIC", "LAN",
+	"Management Subsys Health", "Battery", "Session Audit",
+	"Version Change", "FRU State"}
 
 type SDRRecord interface {
 	DeviceId() string

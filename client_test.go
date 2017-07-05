@@ -17,10 +17,10 @@ limitations under the License.
 package ipmi
 
 import (
-	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 //func TestClient(t *testing.T) {
@@ -95,7 +95,6 @@ func TestGetReserveSDRRepoForReserveId(t *testing.T) {
 			ReservationId:  28661,
 		}
 	})
-	fmt.Println("TestGetReserveSDRRepoForReserveId")
 	resp, err := client.GetReserveSDRRepoForReserveId()
 	assert.NoError(t, err)
 	assert.Equal(t, CommandCompleted, resp.CompletionCode)
