@@ -99,7 +99,7 @@ type sdrMcDeviceLocatorFields struct { //size 10
 type SDRMcDeviceLocator struct {
 	SDRRecordHeader
 	sdrMcDeviceLocatorFields
-	deviceId string
+	Deviceid string
 }
 
 func NewSDRMcDeviceLocator(id uint16, name string) (*SDRMcDeviceLocator, error) {
@@ -110,12 +110,12 @@ func NewSDRMcDeviceLocator(id uint16, name string) (*SDRMcDeviceLocator, error) 
 	r.Recordid = id
 	r.Rtype = SDR_RECORD_TYPE_MC_DEVICE_LOCATOR
 	r.SDRVersion = 0x51
-	r.deviceId = name
+	r.Deviceid = name
 	return r, nil
 }
 
 func (r *SDRMcDeviceLocator) DeviceId() string {
-	return r.deviceId
+	return r.Deviceid
 }
 
 func (r *SDRMcDeviceLocator) RecordId() uint16 {
@@ -160,7 +160,7 @@ type sdrFruDeviceLocatorFields struct { //size 10
 type SDRFruDeviceLocator struct {
 	SDRRecordHeader
 	sdrFruDeviceLocatorFields
-	deviceId string
+	Deviceid string
 }
 
 func NewSDRFruDeviceLocator(id uint16, name string) (*SDRFruDeviceLocator, error) {
@@ -171,12 +171,12 @@ func NewSDRFruDeviceLocator(id uint16, name string) (*SDRFruDeviceLocator, error
 	r.Recordid = id
 	r.Rtype = SDR_RECORD_TYPE_FRU_DEVICE_LOCATOR
 	r.SDRVersion = 0x51
-	r.deviceId = name
+	r.Deviceid = name
 	return r, nil
 }
 
 func (r *SDRFruDeviceLocator) DeviceId() string {
-	return r.deviceId
+	return r.Deviceid
 }
 
 func (r *SDRFruDeviceLocator) RecordId() uint16 {
@@ -247,7 +247,7 @@ type sdrFullSensorFields struct { //size 42
 type SDRFullSensor struct {
 	SDRRecordHeader
 	sdrFullSensorFields
-	deviceId string
+	Deviceid string
 }
 
 func NewSDRFullSensor(id uint16, name string) (*SDRFullSensor, error) {
@@ -258,12 +258,12 @@ func NewSDRFullSensor(id uint16, name string) (*SDRFullSensor, error) {
 	r.Recordid = id
 	r.Rtype = SDR_RECORD_TYPE_FULL_SENSOR
 	r.SDRVersion = 0x51
-	r.deviceId = name
+	r.Deviceid = name
 	return r, nil
 }
 
 func (r *SDRFullSensor) DeviceId() string {
-	return r.deviceId
+	return r.Deviceid
 }
 
 func (r *SDRFullSensor) RecordId() uint16 {
@@ -425,7 +425,7 @@ func (r *SDRFullSensor) UnmarshalBinary(data []byte) error {
 		return ErrIdStringLenNotMatch
 	}
 
-	r.deviceId = string(id)
+	r.Deviceid = string(id)
 
 	return nil
 }
@@ -457,7 +457,7 @@ type sdrCompactSensorFields struct { //size 26
 type SDRCompactSensor struct {
 	SDRRecordHeader
 	sdrCompactSensorFields
-	deviceId string
+	Deviceid string
 }
 
 func NewSDRCompactSensor(id uint16, name string) (*SDRCompactSensor, error) {
@@ -468,7 +468,7 @@ func NewSDRCompactSensor(id uint16, name string) (*SDRCompactSensor, error) {
 	r.Recordid = id
 	r.Rtype = SDR_RECORD_TYPE_COMPACT_SENSOR
 	r.SDRVersion = 0x51
-	r.deviceId = name
+	r.Deviceid = name
 	return r, nil
 }
 
@@ -489,7 +489,7 @@ func (r *SDRCompactSensor) MarshalBinary() (data []byte, err error) {
 	return hb.Bytes(), nil
 }
 func (r *SDRCompactSensor) DeviceId() string {
-	return r.deviceId
+	return r.Deviceid
 }
 
 func (r *SDRCompactSensor) RecordId() uint16 {
@@ -525,7 +525,7 @@ func (r *SDRCompactSensor) UnmarshalBinary(data []byte) error {
 		return ErrIdStringLenNotMatch
 	}
 
-	r.deviceId = string(id)
+	r.Deviceid = string(id)
 
 	return nil
 }
@@ -546,5 +546,5 @@ type sdrMCDeviceLocFields struct { //size 26
 type SDRMCDeviceLoc struct {
 	SDRRecordHeader
 	sdrMCDeviceLocFields
-	deviceId string
+	Deviceid string
 }
