@@ -2,11 +2,15 @@ package ipmi
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"math"
-	//"reflect"
 )
+
+type SdrSensorInfo struct {
+	SensorType SDRSensorType
+	BaseUnit   string
+	Value      float64
+	DeviceId   string
+}
 
 // RepositoryInfo get the Repository Info of the SDR
 func (c *Client) RepositoryInfo() (*SDRRepositoryInfoResponse, error) {
@@ -26,21 +30,42 @@ func (c *Client) GetReserveSDRRepoForReserveId() (*ReserveRepositoryResponse, er
 	}
 	res := &ReserveRepositoryResponse{}
 	return res, c.send(req, res)
+
 }
-func (c *Client) GetSensorList(reservationID uint16, recordID uint16) []*sDRRecordAndValue {
+func (c *Client) GetSensorList(reservationID uint16) ([]SdrSensorInfo, error) {
 	var recordId uint16 = 0
-	var sdrRecAndVallist = make([]*sDRRecordAndValue, 20, 60)
+	var sdrSensorInfolist = make([]SdrSensorInfo, 0, 30)
 	for recordId < 0xffff {
-		sdrRecordAndValue, nId := c.GetSDR(reservationID, recordId)
-		//r2 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor)
-		_ = append(sdrRecAndVallist, sdrRecordAndValue)
+		sdrRecordAndValue, nId, err := c.GetSDR(reservationID, recordId)
+		if err == nil {
+			if fullSensor, ok1 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor); ok1 {
+				if fullSensor.BaseUnit >= 0 && fullSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) {
+					sdrSensorInfolist = append(sdrSensorInfolist, SdrSensorInfo{
+						fullSensor.SensorType,
+						sdrRecordValueBasicUnit[fullSensor.BaseUnit],
+						sdrRecordAndValue.value,
+						fullSensor.deviceId,
+					})
+				}
+
+			} else if compactSensor, ok2 := sdrRecordAndValue.SDRRecord.(*SDRCompactSensor); ok2 {
+				if fullSensor.BaseUnit >= 0 && fullSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) {
+					sdrSensorInfolist = append(sdrSensorInfolist, SdrSensorInfo{
+						compactSensor.SensorType,
+						sdrRecordValueBasicUnit[compactSensor.BaseUnit],
+						sdrRecordAndValue.value,
+						compactSensor.deviceId,
+					})
+				}
+			}
+		}
 		recordId = nId
 	}
-	return sdrRecAndVallist
+	return sdrSensorInfolist, nil
 }
 
 //Get SDR Command  33.12
-func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAndValue, next uint16) {
+func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAndValue, next uint16, err error) {
 	req_step1 := &Request{
 		NetworkFunctionStorge,
 		CommandGetSDR,
@@ -71,10 +96,10 @@ func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAn
 	res_step2 := &GetSDRCommandResponse{}
 	c.Send(req_step2, res_step2)
 	recordKeyBody_Data.Write(res_step2.ReadData)
-	sdrRecordAndValue := c.CalSdrRecordValue(recordType, recordKeyBody_Data)
-	return sdrRecordAndValue, res_step2.NextRecordID
+	sdrRecordAndValue, err := c.CalSdrRecordValue(recordType, recordKeyBody_Data)
+	return sdrRecordAndValue, res_step2.NextRecordID, err
 }
-func (c *Client) CalSdrRecordValue(recordType uint8, recordKeyBody_Data *bytes.Buffer) *sDRRecordAndValue {
+func (c *Client) CalSdrRecordValue(recordType uint8, recordKeyBody_Data *bytes.Buffer) (*sDRRecordAndValue, error) {
 	var sdrRecordAndValue = &sDRRecordAndValue{}
 	if recordType == SDR_RECORD_TYPE_FULL_SENSOR {
 		//Unmarshalbinary and assert
@@ -82,39 +107,35 @@ func (c *Client) CalSdrRecordValue(recordType uint8, recordKeyBody_Data *bytes.B
 
 		fullSensor.UnmarshalBinary(recordKeyBody_Data.Bytes())
 		sdrRecordAndValue.SDRRecord = fullSensor
-		sensorReading, err := c.GetSensorReading(fullSensor.SensorNumber)
+		sensorReading, err := c.getSensorReading(fullSensor.SensorNumber)
 		if err != nil {
 			sdrRecordAndValue.avail = false
 			sdrRecordAndValue.value = 0.00
 		} else {
-			res, avai := CalFullSensorValue(fullSensor, sensorReading)
+			res, avai := calFullSensorValue(fullSensor, sensorReading)
 			sdrRecordAndValue.avail = avai
 			sdrRecordAndValue.value = res
 		}
-		return sdrRecordAndValue
+		return sdrRecordAndValue, err
 	} else if recordType == SDR_RECORD_TYPE_COMPACT_SENSOR {
 		//Unmarshalbinary and assert
 		compactSensor, _ := NewSDRCompactSensor(0, "")
 		compactSensor.UnmarshalBinary(recordKeyBody_Data.Bytes())
 		sdrRecordAndValue.SDRRecord = compactSensor
-		sensorReading, err := c.GetSensorReading(compactSensor.SensorNumber)
+		sensorReading, err := c.getSensorReading(compactSensor.SensorNumber)
 		if err != nil {
 			sdrRecordAndValue.avail = false
 			sdrRecordAndValue.value = 0.00
 		} else {
-			res, avai := CalCompactSensorValue(compactSensor, sensorReading)
+			res, avai := calCompactSensorValue(compactSensor, sensorReading)
 			sdrRecordAndValue.avail = avai
 			sdrRecordAndValue.value = res
 		}
-		return sdrRecordAndValue
-	} else if recordType == SDR_RECORD_TYPE_MC_DEVICE_LOCATOR {
-		//var sdrRecordAndValue = &sDRRecordAndValue{}
-		//compactSensor, _ := NewSDRCompactSensor(0, "")
+		return sdrRecordAndValue, err
 	}
-	return nil
+	return nil, nil
 }
-
-func CalFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
+func calFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
 	if fullSensor, err := sdrRecord.(*SDRFullSensor); err {
 		var result float64
 		var avail bool
@@ -131,7 +152,6 @@ func CalFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool
 					result = (float64(int8(m)*int8(sensorReading)) + float64(b)*math.Pow(10, float64(rexp))) * math.Pow(10, float64(bexp))
 				}
 				avail = true
-
 			}
 		}
 		return result, avail
@@ -139,7 +159,7 @@ func CalFullSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool
 
 	return 0, true
 }
-func CalCompactSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
+func calCompactSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, bool) {
 	var value float64 = 0.0
 	var avail bool = false
 	if compactSensor, err := sdrRecord.(*SDRCompactSensor); err {
@@ -155,7 +175,6 @@ func CalCompactSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, b
 			}
 		} else if compactSensor.ReadingType == SENSOR_READTYPE_SENSORSPECIF {
 			// has analog value
-			fmt.Println(compactSensor.Unit & 0xc0)
 			if compactSensor.Unit&0xc0 == 0xc0 {
 				avail = true
 				value = float64(sensorReading)
@@ -178,7 +197,7 @@ func CalCompactSensorValue(sdrRecord SDRRecord, sensorReading uint8) (float64, b
 }
 
 //Get Sensor Reading  35.14
-func (c *Client) GetSensorReading(sensorNum uint8) (sensorReading uint8, err error) {
+func (c *Client) getSensorReading(sensorNum uint8) (sensorReading uint8, err error) {
 	req := &Request{
 		NetworkFunctionSensorEvent,
 		CommandGetSensorReading,
@@ -189,11 +208,11 @@ func (c *Client) GetSensorReading(sensorNum uint8) (sensorReading uint8, err err
 	res := &GetSensorReadingResponse{}
 	c.Send(req, res)
 	if res == nil {
-		return uint8(0), errors.New("can not found sensor number")
+		return uint8(0), ErrNotFoundTheSensorNum
 	}
 	if (res.ReadingAvail & 0x20) == 0 {
 		readValue := res.SensorReading
 		return readValue, nil
 	}
-	return uint8(0), errors.New("reading unAvailableß")
+	return uint8(0), ErrSensorReadUnavail
 }

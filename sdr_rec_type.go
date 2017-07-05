@@ -25,11 +25,35 @@ import (
 )
 
 var (
-	ErrDeviceIdMustLess16  = errors.New("Device Id must be less or equal to 16 bytes length")
-	ErrUnitNotSupport      = errors.New("Unit not support, only support unsigned and 2's complement signed")
-	ErrMZero               = errors.New("M mustn't be 0")
-	ErrIdStringLenNotMatch = errors.New("Length of the Id string is mismatch")
+	ErrDeviceIdMustLess16   = errors.New("Device Id must be less or equal to 16 bytes length")
+	ErrUnitNotSupport       = errors.New("Unit not support, only support unsigned and 2's complement signed")
+	ErrMZero                = errors.New("M mustn't be 0")
+	ErrIdStringLenNotMatch  = errors.New("Length of the Id string is mismatch")
+	ErrSensorReadUnavail    = errors.New("Sensor Reading Unavailable")
+	ErrNotFoundTheSensorNum = errors.New("failed to found the SensorNumber")
 )
+
+var sdrRecordValueBasicUnit []string = []string{
+	"unspecified",
+	"degrees C", "degrees F", "degrees K",
+	"Volts", "Amps", "Watts", "Joules",
+	"Coulombs", "VA", "Nits",
+	"lumen", "lux", "Candela",
+	"kPa", "PSI", "Newton",
+	"CFM", "RPM", "Hz",
+	"microsecond", "millisecond", "second", "minute", "hour",
+	"day", "week", "mil", "inches", "feet", "cu in", "cu feet",
+	"mm", "cm", "m", "cu cm", "cu m", "liters", "fluid ounce",
+	"radians", "steradians", "revolutions", "cycles",
+	"gravities", "ounce", "pound", "ft-lb", "oz-in", "gauss",
+	"gilberts", "henry", "millihenry", "farad", "microfarad",
+	"ohms", "siemens", "mole", "becquerel", "PPM", "reserved",
+	"Decibels", "DbA", "DbC", "gray", "sievert",
+	"color temp deg K", "bit", "kilobit", "megabit", "gigabit",
+	"byte", "kilobyte", "megabyte", "gigabyte", "word", "dword",
+	"qword", "line", "hit", "miss", "retry", "reset",
+	"overflow", "underrun", "collision", "packets", "messages",
+	"characters", "error", "correctable error", "uncorrectable error"}
 
 type SDRRecord interface {
 	DeviceId() string
