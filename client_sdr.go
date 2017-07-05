@@ -27,6 +27,17 @@ func (c *Client) GetReserveSDRRepoForReserveId() (*ReserveRepositoryResponse, er
 	res := &ReserveRepositoryResponse{}
 	return res, c.send(req, res)
 }
+func (c *Client) GetSensorList(reservationID uint16, recordID uint16) []*sDRRecordAndValue {
+	var recordId uint16 = 0
+	var sdrRecAndVallist = make([]*sDRRecordAndValue, 20, 60)
+	for recordId < 0xffff {
+		sdrRecordAndValue, nId := c.GetSDR(reservationID, recordId)
+		//r2 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor)
+		_ = append(sdrRecAndVallist, sdrRecordAndValue)
+		recordId = nId
+	}
+	return sdrRecAndVallist
+}
 
 //Get SDR Command  33.12
 func (c *Client) GetSDR(reservationID uint16, recordID uint16) (sdr *sDRRecordAndValue, next uint16) {
@@ -185,16 +196,4 @@ func (c *Client) GetSensorReading(sensorNum uint8) (sensorReading uint8, err err
 		return readValue, nil
 	}
 	return uint8(0), errors.New("reading unAvailableß")
-
-}
-func (c *Client) GetSensorList(reservationID uint16, recordID uint16) []*sDRRecordAndValue {
-	var recordId uint16 = 0
-	var sdrRecAndVallist = make([]*sDRRecordAndValue, 20, 60)
-	for recordId < 0xffff {
-		sdrRecordAndValue, nId := c.GetSDR(reservationID, recordId)
-		//r2 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor)
-		_ = append(sdrRecAndVallist, sdrRecordAndValue)
-		recordId = nId
-	}
-	return sdrRecAndVallist
 }

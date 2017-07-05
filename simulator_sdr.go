@@ -207,6 +207,7 @@ func (s *Simulator) getSensorReading(m *Message) Response {
 			sdrFullSensor := (sdrRepo2.SDRRecord).(*SDRFullSensor)
 			if sdrFullSensor.SensorNumber == sensorNum {
 				rep = sdrRepo2
+				break
 			}
 		}
 	}
