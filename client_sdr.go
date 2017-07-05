@@ -6,10 +6,11 @@ import (
 )
 
 type SdrSensorInfo struct {
-	SensorType SDRSensorType
+	SensorType string
 	BaseUnit   string
 	Value      float64
 	DeviceId   string
+	avail      bool
 }
 
 // RepositoryInfo get the Repository Info of the SDR
@@ -39,22 +40,25 @@ func (c *Client) GetSensorList(reservationID uint16) ([]SdrSensorInfo, error) {
 		sdrRecordAndValue, nId, err := c.GetSDR(reservationID, recordId)
 		if err == nil {
 			if fullSensor, ok1 := sdrRecordAndValue.SDRRecord.(*SDRFullSensor); ok1 {
-				if fullSensor.BaseUnit >= 0 && fullSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) {
+				if fullSensor.BaseUnit >= 0 && fullSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) &&
+					fullSensor.SensorType >= 0 && fullSensor.SensorType < uint8(len(sdrRecordValueSensorType)) {
 					sdrSensorInfolist = append(sdrSensorInfolist, SdrSensorInfo{
-						fullSensor.SensorType,
+						sdrRecordValueSensorType[fullSensor.SensorType],
 						sdrRecordValueBasicUnit[fullSensor.BaseUnit],
 						sdrRecordAndValue.value,
 						fullSensor.deviceId,
+						sdrRecordAndValue.avail,
 					})
 				}
-
 			} else if compactSensor, ok2 := sdrRecordAndValue.SDRRecord.(*SDRCompactSensor); ok2 {
-				if fullSensor.BaseUnit >= 0 && fullSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) {
+				if compactSensor.BaseUnit >= 0 && compactSensor.BaseUnit < uint8(len(sdrRecordValueBasicUnit)) &&
+					compactSensor.SensorType >= 0 && compactSensor.SensorType < uint8(len(sdrRecordValueSensorType)) {
 					sdrSensorInfolist = append(sdrSensorInfolist, SdrSensorInfo{
-						compactSensor.SensorType,
+						sdrRecordValueSensorType[compactSensor.SensorType],
 						sdrRecordValueBasicUnit[compactSensor.BaseUnit],
 						sdrRecordAndValue.value,
 						compactSensor.deviceId,
+						sdrRecordAndValue.avail,
 					})
 				}
 			}
