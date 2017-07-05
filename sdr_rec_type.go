@@ -103,6 +103,67 @@ func (r *SDRMcDeviceLocator) MarshalBinary() (data []byte, err error) {
 	return hb.Bytes(), nil
 }
 
+// section 43.9
+type sdrFruDeviceLocatorFields struct { //size 10
+	DeviceAccAddr     uint8
+	FRUDeviceID       uint8
+	LogPhyAccLUNBusID uint8
+	ChannNum          uint8
+	reserved          uint8
+	DeviceType        uint8
+	DevTypeModif      uint8
+	FruEntityId       uint8
+	FruEntityInst     uint8
+	Oem               uint8
+}
+
+type SDRFruDeviceLocator struct {
+	SDRRecordHeader
+	sdrFruDeviceLocatorFields
+	deviceId string
+}
+
+func NewSDRFruDeviceLocator(id uint16, name string) (*SDRFruDeviceLocator, error) {
+	if len(name) > 16 {
+		return nil, ErrDeviceIdMustLess16
+	}
+	r := &SDRFruDeviceLocator{}
+	r.Recordid = id
+	r.Rtype = SDR_RECORD_TYPE_FRU_DEVICE_LOCATOR
+	r.SDRVersion = 0x51
+	r.deviceId = name
+	return r, nil
+}
+
+func (r *SDRFruDeviceLocator) DeviceId() string {
+	return r.deviceId
+}
+
+func (r *SDRFruDeviceLocator) RecordId() uint16 {
+	return r.Recordid
+}
+
+func (r *SDRFruDeviceLocator) RecordType() SDRRecordType {
+	return r.Rtype
+}
+
+func (r *SDRFruDeviceLocator) MarshalBinary() (data []byte, err error) {
+	hb := new(bytes.Buffer)
+	fb := new(bytes.Buffer)
+	db := new(bytes.Buffer)
+	binary.Write(hb, binary.LittleEndian, r.SDRRecordHeader)
+	binary.Write(fb, binary.LittleEndian, r.sdrFruDeviceLocatorFields)
+	db.WriteByte(byte(len(r.DeviceId())))
+	db.WriteString(r.DeviceId())
+
+	//merge all
+	recLen := uint8(fb.Len() + db.Len())
+	hb.WriteByte(byte(recLen))
+	hb.Write(fb.Bytes())
+	hb.Write(db.Bytes())
+	return hb.Bytes(), nil
+}
+
 // section 43.1
 type sdrFullSensorFields struct { //size 42
 	SensorOwnerId        uint8
@@ -329,5 +390,121 @@ func (r *SDRFullSensor) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
+// section 43.2
+type sdrCompactSensorFields struct { //size 26
+	SensorOwnerId        uint8
+	SensorOwnerLUN       uint8
+	SensorNumber         uint8
+	EntityId             uint8
+	EntityIns            uint8
+	SensorInit           uint8
+	SensorCap            uint8
+	SensorType           SDRSensorType
+	ReadingType          SDRSensorReadingType
+	AssertionEventMask   uint16
+	DeassertionEventMask uint16
+	DiscreteReadingMask  uint16
+	Unit                 uint8
+	BaseUnit             uint8
+	ModifierUnit         uint8
+	SensorRecSharing     uint16
+	PThresHysteresisVal  uint8
+	NThresHysteresisVal  uint8
+	Reserved             [2]byte
+	OEM                  uint8
+	IDStringTypeLen      uint8
+}
 type SDRCompactSensor struct {
+	SDRRecordHeader
+	sdrCompactSensorFields
+	deviceId string
+}
+
+func NewSDRCompactSensor(id uint16, name string) (*SDRCompactSensor, error) {
+	if len(name) > 16 {
+		return nil, ErrDeviceIdMustLess16
+	}
+	r := &SDRCompactSensor{}
+	r.Recordid = id
+	r.Rtype = SDR_RECORD_TYPE_COMPACT_SENSOR
+	r.SDRVersion = 0x51
+	r.deviceId = name
+	return r, nil
+}
+
+func (r *SDRCompactSensor) MarshalBinary() (data []byte, err error) {
+	hb := new(bytes.Buffer)
+	fb := new(bytes.Buffer)
+	db := new(bytes.Buffer)
+	binary.Write(hb, binary.LittleEndian, r.SDRRecordHeader)
+	binary.Write(fb, binary.LittleEndian, r.sdrCompactSensorFields)
+	db.WriteByte(byte(len(r.DeviceId())))
+	db.WriteString(r.DeviceId())
+
+	//merge all
+	recLen := uint8(fb.Len() + db.Len())
+	hb.WriteByte(byte(recLen))
+	hb.Write(fb.Bytes())
+	hb.Write(db.Bytes())
+	return hb.Bytes(), nil
+}
+func (r *SDRCompactSensor) DeviceId() string {
+	return r.deviceId
+}
+
+func (r *SDRCompactSensor) RecordId() uint16 {
+	return r.Recordid
+}
+
+func (r *SDRCompactSensor) RecordType() SDRRecordType {
+	return r.Rtype
+}
+func (r *SDRCompactSensor) UnmarshalBinary(data []byte) error {
+	buffer := bytes.NewReader(data)
+	err := binary.Read(buffer, binary.LittleEndian, &r.SDRRecordHeader)
+	if err != nil {
+		return err
+	}
+
+	//skip the record length
+	_, err = buffer.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	binary.Read(buffer, binary.LittleEndian, &r.sdrCompactSensorFields)
+
+	idLen, err := buffer.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	id := make([]byte, int(idLen))
+	n, err := buffer.Read(id)
+	if err != nil || n != int(idLen) {
+		return ErrIdStringLenNotMatch
+	}
+
+	r.deviceId = string(id)
+
+	return nil
+}
+
+// section 43.9
+type sdrMCDeviceLocFields struct { //size 26
+	DeviceSlaveAddr uint8
+	ChannNum        uint8
+	PowerStaNotif   uint8
+	DeviceCapab     uint8
+	Reserved        [3]byte
+	EntityID        uint8
+	EntityInstan    uint8
+	OEM             SDRSensorType
+	DeviceIDCode    SDRSensorReadingType
+	DeviceIDStr     uint16
+}
+type SDRMCDeviceLoc struct {
+	SDRRecordHeader
+	sdrMCDeviceLocFields
+	deviceId string
 }

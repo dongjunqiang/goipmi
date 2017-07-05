@@ -71,6 +71,11 @@ func NewSimulator(addr net.UDPAddr) *Simulator {
 		CommandSetSystemBootOptions: s.setSystemBootOptions,
 	}
 
+	// Built-in handlers for Sensor/Event commands
+	s.handlers[NetworkFunctionSensorEvent] = map[Command]Handler{
+		CommandGetSensorReading: s.getSensorReading,
+	}
+
 	return s
 }
 

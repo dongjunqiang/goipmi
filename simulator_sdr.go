@@ -17,6 +17,7 @@ limitations under the License.
 package ipmi
 
 import (
+	"fmt"
 	//"fmt"
 	"math"
 	"math/rand"
@@ -31,6 +32,7 @@ const sdrOpSupport = SDR_OP_SUP_RESERVE_REPO
 type sDRRecordAndValue struct {
 	SDRRecord
 	value float64
+	avil  bool
 }
 
 type repo struct {
@@ -42,27 +44,52 @@ func NewRepo() *repo {
 	rep.sdrRepo = make([]*sDRRecordAndValue, 0)
 	return rep
 }
-
 func (rep *repo) initRepoData() {
 
 	//this record is used to unit test
 	r1, _ := NewSDRFullSensor(1, "Fan 1")
 	r1.Unit = 0x00
 	r1.BaseUnit = 0x12
+
+	r1.SensorNumber = 0x04
+	r1.ReadingType = SENSOR_READTYPE_THREADHOLD
 	r1.SetMBExp(63, 0, 0, 0)
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r1,
 		value:     2583.0,
+		avil:      true,
 	})
 
 	r2, _ := NewSDRFullSensor(2, "CPU1 DTS")
 	r2.Unit = 0x80
+	r2.SensorNumber = 0x05
+	r2.ReadingType = SENSOR_READTYPE_THREADHOLD
 	r2.BaseUnit = 0x01
 	r2.SetMBExp(1, 0, 0, 0)
 	rep.addRecord(&sDRRecordAndValue{
 		SDRRecord: r2,
 		value:     -49.0,
+		avil:      true,
 	})
+	//todo 测试更多类型的sensorRecord
+	//	r4, _ := NewSDRFullSensor(2, "CPU1 DTS")
+	//	r4.Unit = 0x80
+	//	r4.SensorNumber = 0x08
+	//	r4.ReadingType = SENSOR_READTYPE_GENERIC_L
+	//	r4.BaseUnit = 0x01
+	//	r4.SetMBExp(1, 0, 0, 0)
+	//	rep.addRecord(&sDRRecordAndValue{
+	//		SDRRecord: r4,
+	//		value:     -49.0,
+	//		avil:      true,
+	//	})
+
+	//	r3, _ := NewSDRCompactSensor(2, "CPU1 DTS")
+	//	rep.addRecord(&sDRRecordAndValue{
+	//		SDRRecord: r3,
+	//		value:     -49.0,
+	//		avil:      false,
+	//	})
 }
 
 func (rep *repo) addRecord(rec *sDRRecordAndValue) {
@@ -151,7 +178,7 @@ func (s *Simulator) getSDR(m *Message) Response {
 	if err := m.Request(request); err != nil {
 		return err
 	}
-
+	fmt.Println("request.ReservationID==", request.ReservationID)
 	rId := request.ReservationID
 	if rep, ok = defaultRepo[rId]; !ok {
 		//TODO return err
@@ -165,8 +192,36 @@ func (s *Simulator) getSDR(m *Message) Response {
 	response.ReadData = data[request.OffsetIntoRecord : request.OffsetIntoRecord+request.ByteToRead]
 	return response
 }
+func (s *Simulator) getSensorReading(m *Message) Response {
+	request := &GetSensorReadingRequest{}
+	if err := m.Request(request); err != nil {
+		return err
+	}
+	sensorNum := request.SensorNumber
+	var rep *sDRRecordAndValue = nil
+	for _, value := range defaultRepo {
+		for _, sdrRepo2 := range value.sdrRepo {
+			sdrFullSensor := (sdrRepo2.SDRRecord).(*SDRFullSensor)
+			if sdrFullSensor.SensorNumber == sensorNum {
+				rep = sdrRepo2
+			}
+		}
+	}
+	if rep == nil {
+		return nil
+	} else {
+		sdrFullSensor2 := (rep.SDRRecord).(*SDRFullSensor)
 
-func (s *Simulator) getSensorReading(*Message) Response {
-	return nil
-
+		value := rep.value
+		sensorReading2 := sdrFullSensor2.CalValue(value)
+		response := &GetSensorReadingResponse{}
+		response.CompletionCode = CommandCompleted
+		response.SensorReading = sensorReading2
+		if rep.avil == true {
+			response.ReadingAvail = 0x20
+		} else {
+			response.ReadingAvail = 0x10
+		}
+		return response
+	}
 }
