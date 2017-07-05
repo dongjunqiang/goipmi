@@ -10,7 +10,7 @@ type SdrSensorInfo struct {
 	BaseUnit   string
 	Value      float64
 	DeviceId   string
-	avail      bool
+	Avail      bool
 }
 
 // RepositoryInfo get the Repository Info of the SDR
@@ -46,7 +46,7 @@ func (c *Client) GetSensorList(reservationID uint16) ([]SdrSensorInfo, error) {
 						sdrRecordValueSensorType[fullSensor.SensorType],
 						sdrRecordValueBasicUnit[fullSensor.BaseUnit],
 						sdrRecordAndValue.value,
-						fullSensor.deviceId,
+						fullSensor.Deviceid,
 						sdrRecordAndValue.avail,
 					})
 				}
@@ -57,7 +57,7 @@ func (c *Client) GetSensorList(reservationID uint16) ([]SdrSensorInfo, error) {
 						sdrRecordValueSensorType[compactSensor.SensorType],
 						sdrRecordValueBasicUnit[compactSensor.BaseUnit],
 						sdrRecordAndValue.value,
-						compactSensor.deviceId,
+						compactSensor.Deviceid,
 						sdrRecordAndValue.avail,
 					})
 				}

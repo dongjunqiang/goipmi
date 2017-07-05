@@ -84,7 +84,7 @@ func TestGetSDR(t *testing.T) {
 	r1.Recordid = 5
 	r1.Rtype = SDR_RECORD_TYPE_FULL_SENSOR
 	r1.SDRVersion = 0x51
-	r1.deviceId = "fullsensor deviceid"
+	r1.Deviceid = "fullsensor deviceid"
 	r1.Unit = 0x00
 	r1.SensorNumber = 0x04
 	r1.BaseUnit = 0x12
@@ -115,7 +115,7 @@ func TestGetSDR(t *testing.T) {
 	r2.Recordid = 10
 	r2.Rtype = SDR_RECORD_TYPE_COMPACT_SENSOR
 	r2.SDRVersion = 0x51
-	r2.deviceId = "compactsensor deviceId"
+	r2.Deviceid = "compactsensor Deviceid"
 	r2.Unit = 0x00
 	r2.SensorNumber = 0x04
 	r2.BaseUnit = 0x12
@@ -136,7 +136,7 @@ func TestGetSDR(t *testing.T) {
 	if err2 == nil {
 		r22 := sdrRecordAndValue2.SDRRecord.(*SDRCompactSensor)
 		assert.Equal(t, SDRRecordType(SDR_RECORD_TYPE_COMPACT_SENSOR), r22.Rtype)
-		assert.Equal(t, "compactsensor deviceId", r22.DeviceId())
+		assert.Equal(t, "compactsensor Deviceid", r22.DeviceId())
 		assert.Equal(t, uint16(65535), nextRecordId2)
 	}
 
@@ -151,30 +151,30 @@ func TestCalFullSensorValue(t *testing.T) {
 	fs1.SetMBExp(8, 0, 0, 0)
 	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
 	fs1.Unit = 0x0
-	res, avail := calFullSensorValue(fs1, 0x11)
+	res, Avail := calFullSensorValue(fs1, 0x11)
 	assert.Equal(t, float64(136.0), res)
-	assert.Equal(t, true, avail)
+	assert.Equal(t, true, Avail)
 
 	fs1.SetMBExp(1, 0, 0, 0)
 	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
 	fs1.Unit = 0x80
-	res, avail = calFullSensorValue(fs1, 0xcf)
+	res, Avail = calFullSensorValue(fs1, 0xcf)
 	assert.Equal(t, float64(-49.0), res)
-	assert.Equal(t, true, avail)
+	assert.Equal(t, true, Avail)
 
 	fs1.SetMBExp(2, 0, 0, -2)
 	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
 	fs1.Unit = 0x00
-	res, avail = calFullSensorValue(fs1, 0xa8)
+	res, Avail = calFullSensorValue(fs1, 0xa8)
 	assert.Equal(t, float64(3.36), res)
 
 	fs1.SetMBExp(2, 0, 0, -2)
 	fs1.ReadingType = SENSOR_READTYPE_THREADHOLD
 	fs1.Unit = 0x00
-	res, avail = calFullSensorValue(fs1, 0xa8)
+	res, Avail = calFullSensorValue(fs1, 0xa8)
 	assert.Equal(t, float64(3.36), res)
 
-	assert.Equal(t, true, avail)
+	assert.Equal(t, true, Avail)
 }
 func TestCalCompactSensorValue(t *testing.T) {
 	cs1 := &SDRCompactSensor{}
@@ -229,7 +229,7 @@ func TestGetSensorList(t *testing.T) {
 	r1.Recordid = 5
 	r1.Rtype = SDR_RECORD_TYPE_FULL_SENSOR
 	r1.SDRVersion = 0x51
-	r1.deviceId = "Fan 5"
+	r1.Deviceid = "Fan 5"
 	r1.Unit = 0x0
 	r1.SensorNumber = 0x04
 	r1.SensorType = SDR_SENSOR_TYPECODES_FAN
@@ -268,7 +268,7 @@ func TestGetSensorList(t *testing.T) {
 			assert.Equal(t, float64(2646), sdrSensorInfoList[0].Value)
 			assert.Equal(t, "Fan 5", sdrSensorInfoList[0].DeviceId)
 			assert.Equal(t, "RPM", sdrSensorInfoList[0].BaseUnit)
-			assert.Equal(t, true, sdrSensorInfoList[0].avail)
+			assert.Equal(t, true, sdrSensorInfoList[0].Avail)
 		}
 
 	}
